@@ -1,0 +1,704 @@
+/* ===========================
+   Global Background
+=========================== */
+
+body{
+    background:#f4f7fb;
+    font-family:Arial, Helvetica, sans-serif;
+}
+
+
+/* ===========================
+   Dashboard Cards
+=========================== */
+
+.dashboard-card{
+
+    border:none;
+
+    border-radius:20px;
+
+    overflow:hidden;
+
+    transition:all .35s ease;
+
+    box-shadow:0 12px 25px rgba(0,0,0,.12);
+
+    cursor:pointer;
+
+}
+
+.dashboard-card:hover{
+
+    transform:translateY(-10px) scale(1.03);
+
+    box-shadow:0 20px 45px rgba(37,99,235,.30);
+
+}
+
+.dashboard-number{
+
+    font-size:2.3rem;
+
+    font-weight:700;
+
+    margin-top:10px;
+
+    margin-bottom:10px;
+
+}
+
+/* ===========================
+   Card Numbers
+=========================== */
+
+.dashboard-number{
+
+    font-size:42px;
+
+    font-weight:bold;
+
+}
+
+
+/* ===========================
+   Welcome Banner
+=========================== */
+
+.welcome-banner{
+
+    background:linear-gradient(135deg,#2563eb,#4f46e5);
+
+    color:white;
+
+    border-radius:20px;
+
+    padding:35px;
+
+    margin-bottom:30px;
+
+    box-shadow:0 12px 30px rgba(0,0,0,.15);
+
+}
+
+
+/* ===========================
+   Buttons
+=========================== */
+
+.btn{
+
+    border-radius:10px;
+
+    transition:.25s;
+
+}
+
+.btn:hover{
+
+    transform:translateY(-2px);
+
+}
+
+/* ==========================
+   Dashboard Overview
+========================== */
+
+.border.rounded{
+
+    transition:all .3s ease;
+
+}
+
+.border.rounded:hover{
+
+    transform:translateY(-5px);
+
+    box-shadow:0 10px 25px rgba(0,0,0,.12);
+
+}
+
+/* ==========================
+   Recent Activity
+========================== */
+
+.list-group-item{
+
+    border:none;
+
+    border-bottom:1px solid #e9ecef;
+
+    transition:.25s;
+
+}
+
+.list-group-item:last-child{
+
+    border-bottom:none;
+
+}
+
+.list-group-item:hover{
+
+    background:#f8f9fa;
+
+    transform:translateX(8px);
+
+}
+
+/* ================================= */
+/* PREMIUM HERO */
+/* ================================= */
+
+.premium-hero{
+
+    background:linear-gradient(
+        135deg,
+        #2563eb,
+        #1e40af
+    );
+
+    border-radius:25px;
+
+    padding:45px;
+
+    color:white;
+
+    overflow:hidden;
+
+    position:relative;
+
+    box-shadow:
+    0 20px 40px rgba(0,0,0,.18);
+
+}
+
+.premium-hero::before{
+
+    content:"";
+
+    position:absolute;
+
+    width:320px;
+
+    height:320px;
+
+    background:rgba(255,255,255,.08);
+
+    border-radius:50%;
+
+    top:-120px;
+
+    right:-100px;
+
+}
+
+.hero-badge{
+
+    display:inline-block;
+
+    padding:8px 18px;
+
+    background:rgba(255,255,255,.18);
+
+    backdrop-filter:blur(12px);
+
+    border-radius:30px;
+
+    font-weight:600;
+
+    font-size:.95rem;
+
+}
+
+.hero-title{
+
+    font-size:3rem;
+
+    font-weight:800;
+
+    line-height:1.2;
+
+}
+
+.hero-name{
+
+    color:#FFD54F;
+
+}
+
+.hero-role{
+
+    font-size:1.3rem;
+
+    opacity:.9;
+
+    margin-top:10px;
+
+    font-weight:600;
+
+}
+
+.hero-description{
+
+    font-size:1.08rem;
+
+    margin-top:20px;
+
+    max-width:620px;
+
+    opacity:.95;
+
+}
+
+.hero-clock{
+
+    background:rgba(255,255,255,.12);
+
+    backdrop-filter:blur(15px);
+
+    border-radius:20px;
+
+    padding:25px;
+
+    text-align:center;
+
+}
+
+.clock-title{
+
+    font-size:1rem;
+
+    opacity:.8;
+
+    margin-bottom:10px;
+
+}
+
+#currentTime{
+
+    font-size:2.4rem;
+
+    font-weight:800;
+
+}
+
+#currentDate{
+
+    margin-top:10px;
+
+    opacity:.9;
+
+}
+
+/* Floating Animation */
+
+@keyframes heroFloat{
+
+    0%{
+
+        transform:translateY(0px);
+
+    }
+
+    50%{
+
+        transform:translateY(-6px);
+
+    }
+
+    100%{
+
+        transform:translateY(0px);
+
+    }
+
+}
+
+.hero-clock{
+
+    animation:heroFloat 4s ease-in-out infinite;
+
+}
+
+/* ================================= */
+/* PREMIUM DASHBOARD CARDS */
+/* ================================= */
+
+.dashboard-stat-card{
+
+    border-radius:22px;
+
+    padding:28px;
+
+    text-align:center;
+
+    color:white;
+
+    transition:.35s;
+
+    cursor:pointer;
+
+    position:relative;
+
+    overflow:hidden;
+
+    box-shadow:0 15px 35px rgba(0,0,0,.12);
+
+}
+
+.dashboard-stat-card::before{
+
+    content:"";
+
+    position:absolute;
+
+    width:180px;
+
+    height:180px;
+
+    background:rgba(255,255,255,.10);
+
+    border-radius:50%;
+
+    top:-80px;
+
+    right:-70px;
+
+}
+
+.dashboard-stat-card:hover{
+
+    transform:translateY(-10px);
+
+    box-shadow:0 25px 45px rgba(0,0,0,.18);
+
+}
+
+.stat-icon{
+
+    font-size:2.8rem;
+
+    margin-bottom:15px;
+
+}
+
+.stat-number{
+
+    font-size:3rem;
+
+    font-weight:800;
+
+    line-height:1;
+
+}
+
+.stat-title{
+
+    font-size:1.2rem;
+
+    font-weight:700;
+
+    margin-top:15px;
+
+}
+
+.stat-subtitle{
+
+    margin-top:8px;
+
+    opacity:.9;
+
+    font-size:.9rem;
+
+}
+
+/* Card Colors */
+
+.primary-card{
+
+    background:linear-gradient(135deg,#2563EB,#1D4ED8);
+
+}
+
+.success-card{
+
+    background:linear-gradient(135deg,#10B981,#059669);
+
+}
+
+.warning-card{
+
+    background:linear-gradient(135deg,#F59E0B,#D97706);
+
+    color:#111827;
+
+}
+
+.info-card{
+
+    background:linear-gradient(135deg,#06B6D4,#0891B2);
+
+}
+
+.secondary-card{
+
+    background:linear-gradient(135deg,#64748B,#475569);
+
+}
+
+.danger-card{
+
+    background:linear-gradient(135deg,#EF4444,#DC2626);
+
+}
+
+/* Responsive */
+
+@media(max-width:992px){
+
+.dashboard-stat-card{
+
+    margin-bottom:15px;
+
+}
+
+}
+
+/* ================================= */
+/* QUICK ACTIONS V2 */
+/* ================================= */
+
+.quick-action-card{
+
+    border:none;
+
+    border-radius:22px;
+
+    transition:.35s;
+
+    overflow:hidden;
+
+    box-shadow:0 12px 28px rgba(0,0,0,.08);
+
+}
+
+.quick-action-card:hover{
+
+    transform:translateY(-8px);
+
+    box-shadow:0 22px 40px rgba(37,99,235,.18);
+
+}
+
+.quick-action-card .display-5{
+
+    transition:.35s;
+
+}
+
+.quick-action-card:hover .display-5{
+
+    transform:scale(1.15) rotate(8deg);
+
+}
+
+.quick-action-card .card-body{
+
+    padding:32px 20px;
+
+}
+
+.quick-action-card h6{
+
+    font-size:1rem;
+
+    font-weight:700;
+
+    margin-top:18px;
+
+}
+
+/* ================================= */
+/* PREMIUM ANALYTICS */
+/* ================================= */
+
+.analytics-header{
+
+    margin-bottom:35px;
+
+}
+
+.analytics-header h2{
+
+    color:#2563EB;
+
+    font-weight:800;
+
+    margin-bottom:8px;
+
+}
+
+.analytics-header p{
+
+    color:#6B7280;
+
+    margin:0;
+
+}
+
+.analytics-card{
+
+    border:none;
+
+    border-radius:24px;
+
+    box-shadow:0 15px 35px rgba(0,0,0,.08);
+
+    transition:.35s;
+
+    overflow:hidden;
+
+}
+
+.analytics-card:hover{
+
+    transform:translateY(-8px);
+
+    box-shadow:0 25px 45px rgba(37,99,235,.15);
+
+}
+
+.analytics-title{
+
+    text-align:center;
+
+    font-weight:700;
+
+    margin-bottom:30px;
+
+    color:#374151;
+
+}
+
+.analytics-card canvas{
+
+    max-height:320px;
+
+}
+
+.available-badge{
+
+    background:#10B981 !important;
+
+    color:white !important;
+
+    font-size:.85rem;
+
+    font-weight:600;
+
+    padding:8px 12px;
+
+    border-radius:20px;
+
+    display:inline-block;
+
+}
+
+/* ================================= */
+/* RESPONSIVE DASHBOARD */
+/* ================================= */
+
+@media (max-width: 992px){
+
+    .dashboard-stat-card{
+
+        margin-bottom:20px;
+
+    }
+
+    .hero-banner{
+
+        text-align:center;
+
+    }
+
+    .hero-banner .row{
+
+        flex-direction:column;
+
+    }
+
+    .hero-clock{
+
+        margin-top:25px;
+
+    }
+
+}
+
+@media (max-width:768px){
+
+    h1{
+
+        font-size:2.2rem;
+
+    }
+
+    .dashboard-stat-card{
+
+        padding:22px;
+
+    }
+
+    .stat-number{
+
+        font-size:2.4rem;
+
+    }
+
+    .quick-action-card{
+
+        margin-bottom:20px;
+
+    }
+
+    .analytics-card{
+
+        margin-bottom:25px;
+
+    }
+
+}
+
+@media (max-width:576px){
+
+    .stat-number{
+
+        font-size:2rem;
+
+    }
+
+    .stat-icon{
+
+        font-size:2.2rem;
+
+    }
+
+    .quick-icon{
+
+        width:60px;
+
+        height:60px;
+
+        font-size:1.6rem;
+
+    }
+
+    .analytics-title{
+
+        font-size:1.1rem;
+
+    }
+
+}

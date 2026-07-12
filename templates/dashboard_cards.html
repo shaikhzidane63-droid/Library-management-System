@@ -1,0 +1,207 @@
+<div class="row g-4 mb-5">
+
+    <!-- Total Books -->
+
+    <div class="col-xl-2 col-lg-4 col-md-6">
+
+        <div class="dashboard-stat-card primary-card">
+
+            <div class="stat-icon">
+
+                📚
+
+            </div>
+
+            <div class="stat-number" id="booksCounter">
+
+                {{ total_books }}
+
+            </div>
+
+            <div class="stat-title">
+
+                Total Books
+
+            </div>
+
+            <div class="stat-subtitle">
+
+                Library Collection
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Total Copies -->
+
+    <div class="col-xl-2 col-lg-4 col-md-6">
+
+        <div class="dashboard-stat-card success-card">
+
+            <div class="stat-icon">
+
+                📖
+
+            </div>
+
+            <div class="stat-number" id="copiesCounter">
+
+                {{ total_quantity }}
+
+            </div>
+
+            <div class="stat-title">
+
+                Total Copies
+
+            </div>
+
+            <div class="stat-subtitle">
+
+                Available Inventory
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Categories -->
+
+    <div class="col-xl-2 col-lg-4 col-md-6">
+
+        <div class="dashboard-stat-card warning-card">
+
+            <div class="stat-icon">
+
+                📂
+
+            </div>
+
+            <div class="stat-number" id="categoriesCounter">
+
+                {{ total_categories }}
+
+            </div>
+
+            <div class="stat-title">
+
+                Categories
+
+            </div>
+
+            <div class="stat-subtitle">
+
+                Book Sections
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Members -->
+
+    <div class="col-xl-2 col-lg-4 col-md-6">
+
+        <div class="dashboard-stat-card info-card">
+
+            <div class="stat-icon">
+
+                👥
+
+            </div>
+
+            <div class="stat-number" id="membersCounter">
+
+                {{ total_members }}
+
+            </div>
+
+            <div class="stat-title">
+
+                Members
+
+            </div>
+
+            <div class="stat-subtitle">
+
+                Registered Users
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Borrowed -->
+
+    <div class="col-xl-2 col-lg-4 col-md-6">
+
+        <div class="dashboard-stat-card secondary-card">
+
+            <div class="stat-icon">
+
+                📚
+
+            </div>
+
+            <div class="stat-number" id="borrowedCounter">
+
+                {{ borrowed_books }}
+
+            </div>
+
+            <div class="stat-title">
+
+                Borrowed
+
+            </div>
+
+            <div class="stat-subtitle">
+
+                Currently Issued
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Overdue -->
+
+    <div class="col-xl-2 col-lg-4 col-md-6">
+
+        <div class="dashboard-stat-card danger-card">
+
+            <div class="stat-icon">
+
+                ⚠️
+
+            </div>
+
+            <div class="stat-number" id="overdueCounter">
+
+                {{ overdue_books }}
+
+            </div>
+
+            <div class="stat-title">
+
+                Overdue
+
+            </div>
+
+            <div class="stat-subtitle">
+
+                Need Attention
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
