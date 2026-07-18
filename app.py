@@ -12,6 +12,21 @@ import os
 from datetime import date, timedelta
 from functools import wraps
 
+
+from flask import send_file
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import (
+    SimpleDocTemplate,
+    Paragraph,
+    Spacer,
+    Table,
+    TableStyle
+)
+import io
+from datetime import datetime
+
 import mysql.connector
 from flask import Flask, render_template, request, redirect, flash, session
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -31,10 +46,10 @@ app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
 DB_CONFIG = {
-    "host": os.environ.get("DB_HOST", "localhost"),
-    "user": os.environ.get("DB_USER", "root"),
-    "password": os.environ.get("DB_PASSWORD", "Zndag8"),
-    "database": os.environ.get("DB_NAME", "library_management_system"),
+    "host": os.environ.get("DB_HOST"),
+    "user": os.environ.get("DB_USER"),
+    "password": os.environ.get("DB_PASSWORD"),
+    "database": os.environ.get("DB_NAME"),
 }
 
 # =========================================================
@@ -94,6 +109,109 @@ def student_login_required(f):
 # =========================================================
 # Helper Functions
 # =========================================================
+
+def create_pdf(title, headers, data):
+    buffer = io.BytesIO()
+
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
+
+    styles = getSampleStyleSheet()
+
+    elements = []
+
+    elements.append(
+        Paragraph(
+            "<b>UTTAR BHARATIYA SANGH'S</b>",
+            styles["Title"]
+        )
+    )
+
+    elements.append(
+        Paragraph(
+            "<b>MAHENDRA PRATAP SHARADA PRASAD SINGH</b>",
+            styles["Heading1"]
+        )
+    )
+
+    elements.append(
+        Paragraph(
+            "<b>COLLEGE OF COMMERCE AND SCIENCE</b>",
+            styles["Heading2"]
+        )
+    )
+
+    elements.append(
+        Paragraph(
+            "<b>CENTRAL LIBRARY</b>",
+            styles["Heading2"]
+        )
+    )
+
+    elements.append(Spacer(1,20))
+
+    elements.append(
+        Paragraph(
+            f"<b>{title}</b>",
+            styles["Heading1"]
+        )
+    )
+
+    elements.append(
+        Paragraph(
+            f"Generated : {datetime.now().strftime('%d-%m-%Y %I:%M %p')}",
+            styles["Normal"]
+        )
+    )
+
+    elements.append(Spacer(1,20))
+
+    table_data = [headers]
+
+    table_data.extend(data)
+
+    table = Table(table_data)
+
+    table.setStyle(TableStyle([
+
+        ("BACKGROUND",(0,0),(-1,0),colors.darkblue),
+
+        ("TEXTCOLOR",(0,0),(-1,0),colors.white),
+
+        ("GRID",(0,0),(-1,-1),1,colors.black),
+
+        ("BACKGROUND",(0,1),(-1,-1),colors.beige),
+
+        ("ALIGN",(0,0),(-1,-1),"CENTER"),
+
+        ("FONTNAME",(0,0),(-1,0),"Helvetica-Bold"),
+
+        ("BOTTOMPADDING",(0,0),(-1,0),12)
+
+    ]))
+
+    elements.append(table)
+
+    elements.append(Spacer(1,30))
+
+    elements.append(
+        Paragraph(
+            "Library Management System Version 1.0",
+            styles["Normal"]
+        )
+    )
+
+    elements.append(
+        Paragraph(
+            "Developed by Zidane Shaikh",
+            styles["Normal"]
+        )
+    )
+
+    doc.build(elements)
+
+    buffer.seek(0)
+
+    return buffer
 
 def log_activity(action):
     """Record an admin action in the activity_logs table."""
@@ -1327,10 +1445,176 @@ def reports():
         total_fines=total_fines,
     )
 
+@app.route("/export/books")
+@login_required
+def export_books():
+
+    cursor.execute("""
+        SELECT
+            title,
+            author,
+            category,
+            quantity
+        FROM books
+        ORDER BY title
+    """)
+
+    books = cursor.fetchall()
+
+    pdf = create_pdf(
+        "BOOK INVENTORY REPORT",
+        ["Title", "Author", "Category", "Copies"],
+        books,
+    )
+
+    return send_file(
+        pdf,
+        download_name=f"Books_Report_{datetime.now().strftime('%Y%m%d')}.pdf",
+        as_attachment=True,
+        mimetype="application/pdf",
+    )
+
+@app.route("/export/members")
+@login_required
+def export_members():
+
+    cursor.execute("""
+        SELECT
+            id,
+            full_name,
+            email,
+            phone
+        FROM members
+        ORDER BY full_name
+    """)
+
+    members = cursor.fetchall()
+
+    pdf = create_pdf(
+        "LIBRARY MEMBERS REPORT",
+        ["ID", "Member Name", "Email", "Phone"],
+        members,
+    )
+
+    return send_file(
+        pdf,
+        download_name=f"Members_Report_{datetime.now().strftime('%Y%m%d')}.pdf",
+        as_attachment=True,
+        mimetype="application/pdf",
+    )
+
+@app.route("/export/borrow")
+@login_required
+def export_borrow():
+
+    cursor.execute("""
+        SELECT
+            b.title,
+            m.full_name,
+            bh.borrow_date,
+            bh.due_date,
+            bh.return_date,
+            bh.status
+        FROM borrow_history bh
+        JOIN books b ON bh.book_id = b.id
+        JOIN members m ON bh.member_id = m.id
+        ORDER BY bh.borrow_date DESC
+    """)
+
+    history = cursor.fetchall()
+
+    pdf = create_pdf(
+        "BORROW HISTORY REPORT",
+        ["Book", "Member", "Borrowed", "Due", "Returned", "Status"],
+        history,
+    )
+
+    return send_file(
+        pdf,
+        download_name=f"Borrow_History_{datetime.now().strftime('%Y%m%d')}.pdf",
+        as_attachment=True,
+        mimetype="application/pdf",
+    )
+
+@app.route("/export/fines")
+@login_required
+def export_fines():
+
+    cursor.execute("""
+        SELECT
+            b.title,
+            m.full_name,
+            bh.fine,
+            bh.fine_paid
+        FROM borrow_history bh
+        JOIN books b ON bh.book_id = b.id
+        JOIN members m ON bh.member_id = m.id
+        WHERE bh.fine > 0
+        ORDER BY bh.fine DESC
+    """)
+
+    fines = cursor.fetchall()
+
+    pdf = create_pdf(
+        "FINE COLLECTION REPORT",
+        ["Book", "Member", "Fine", "Paid"],
+        fines,
+    )
+
+    return send_file(
+        pdf,
+        download_name=f"Fine_Report_{datetime.now().strftime('%Y%m%d')}.pdf",
+        as_attachment=True,
+        mimetype="application/pdf",
+    )
+
+@app.route("/export/complete")
+@login_required
+def export_complete():
+
+    cursor.execute("SELECT COUNT(*) FROM books")
+    total_books = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM members")
+    total_members = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM borrow_history WHERE status='Borrowed'")
+    borrowed = cursor.fetchone()[0]
+
+    cursor.execute("SELECT COUNT(*) FROM borrow_history WHERE status='Returned'")
+    returned = cursor.fetchone()[0]
+
+    cursor.execute("SELECT IFNULL(SUM(fine),0) FROM borrow_history")
+    fines = cursor.fetchone()[0]
+
+    data = [
+        ["Total Books", total_books],
+        ["Total Members", total_members],
+        ["Borrowed Books", borrowed],
+        ["Returned Books", returned],
+        ["Total Fine Collected", f"₹{fines}"],
+    ]
+
+    pdf = create_pdf(
+        "COMPLETE LIBRARY SUMMARY",
+        ["Description", "Value"],
+        data,
+    )
+
+    return send_file(
+        pdf,
+        download_name=f"Library_Report_{datetime.now().strftime('%Y%m%d')}.pdf",
+        as_attachment=True,
+        mimetype="application/pdf",
+    )
 
 # =========================================================
 # Entry Point
 # =========================================================
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(
+        host="0.0.0.0",
+        port=5000,
+        debug=True
+    )

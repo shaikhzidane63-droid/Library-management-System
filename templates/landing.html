@@ -7,56 +7,132 @@
 
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>Digital Library</title>
+    <title>Central Library | MPSS College</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
-    <link rel="stylesheet"
-          href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <style>
+
+        body{
+            background:linear-gradient(135deg,#0d6efd,#0b3d91);
+            min-height:100vh;
+        }
+
+        .hero-card{
+            border:none;
+            border-radius:25px;
+            overflow:hidden;
+            box-shadow:0 20px 50px rgba(0,0,0,.25);
+        }
+
+        .college-logo{
+            width:120px;
+            height:120px;
+            object-fit:contain;
+        }
+
+        .portal-card{
+            transition:.3s;
+            border:none;
+            border-radius:20px;
+        }
+
+        .portal-card:hover{
+            transform:translateY(-8px);
+            box-shadow:0 15px 30px rgba(0,0,0,.2);
+        }
+
+        .college-name{
+            color:#003366;
+            font-weight:bold;
+            font-size:30px;
+        }
+
+        .library-title{
+            color:#0d6efd;
+            font-weight:bold;
+            font-size:22px;
+        }
+
+        .footer{
+            background:#f8f9fa;
+            font-size:15px;
+        }
+
+    </style>
 
 </head>
 
-<body class="bg-light">
+<body>
 
-<div class="container">
+<div class="container py-5">
 
-<div class="row justify-content-center align-items-center min-vh-100">
+<div class="card hero-card">
 
-<div class="col-lg-8">
+<div class="card-body p-5">
 
-<div class="text-center mb-5">
+<div class="text-center">
 
-<h1 class="display-3 fw-bold text-primary">
+<img src="{{ url_for('static', filename='images/college_logo.png') }}"
+class="college-logo mb-3">
 
-📚 Digital Library
+<h5 class="text-primary fw-bold">
 
-</h1>
+UTTAR BHARATIYA SANGH'S
 
-<p class="lead text-muted">
+</h5>
 
-Manage • Learn • Discover
+<h2 class="college-name">
+
+MAHENDRA PRATAP SHARADA PRASAD SINGH
+
+</h2>
+
+<h3 class="text-danger fw-bold">
+
+COLLEGE OF COMMERCE AND SCIENCE
+
+</h3>
+
+<hr>
+
+<h3 class="library-title">
+
+📚 CENTRAL LIBRARY
+
+</h3>
+
+<h5 class="text-secondary">
+
+Library Management System
+
+</h5>
+
+<p class="text-muted">
+
+Empowering Learning • Managing Knowledge • Building the Future
 
 </p>
 
 </div>
 
-<div class="row g-4">
+<div class="row mt-5">
 
-<!-- Admin -->
+<div class="col-md-6 mb-4">
 
-<div class="col-md-6">
-
-<div class="card shadow-lg border-0 h-100">
+<div class="card portal-card shadow h-100">
 
 <div class="card-body text-center p-5">
 
-<div class="display-2">
+<div style="font-size:70px">
 
 👨‍💼
 
 </div>
 
-<h3 class="fw-bold mt-3">
+<h3 class="mt-3 fw-bold">
 
 Administrator Portal
 
@@ -64,14 +140,13 @@ Administrator Portal
 
 <p class="text-muted">
 
-Manage books, members, reports and analytics.
+Manage books, members, borrowing, reports and complete library administration.
 
 </p>
 
-<a href="/login"
-class="btn btn-primary btn-lg w-100">
+<a href="/login" class="btn btn-primary btn-lg w-100">
 
-Admin Login
+Administrator Login
 
 </a>
 
@@ -81,21 +156,19 @@ Admin Login
 
 </div>
 
-<!-- Student -->
+<div class="col-md-6 mb-4">
 
-<div class="col-md-6">
-
-<div class="card shadow-lg border-0 h-100">
+<div class="card portal-card shadow h-100">
 
 <div class="card-body text-center p-5">
 
-<div class="display-2">
+<div style="font-size:70px">
 
 👨‍🎓
 
 </div>
 
-<h3 class="fw-bold mt-3">
+<h3 class="mt-3 fw-bold">
 
 Student Portal
 
@@ -103,12 +176,11 @@ Student Portal
 
 <p class="text-muted">
 
-Browse books, manage your profile and track borrowing.
+Browse available books, view borrowed books, fines and your personal account.
 
 </p>
 
-<a href="/student_login"
-class="btn btn-success btn-lg w-100">
+<a href="/student_login" class="btn btn-success btn-lg w-100">
 
 Student Login
 
@@ -122,13 +194,41 @@ Student Login
 
 </div>
 
-<hr class="my-5">
+</div>
 
-<div class="text-center text-muted">
+<div class="footer text-center py-4">
 
-© 2026 Digital Library Management System
+<h6 class="fw-bold mb-1">
+
+Central Library
+
+</h6>
+
+<div>
+
+Uttar Bharatiya Sangh's
+
+Mahendra Pratap Sharada Prasad Singh
+
+College of Commerce and Science
 
 </div>
+
+<div class="mt-2">
+
+<strong>Library Management System Version 1.0</strong>
+
+</div>
+
+<div class="mt-2">
+
+Developed by <strong>Zidane Shaikh</strong>
+
+</div>
+
+<div class="text-muted mt-2">
+
+© 2026 All Rights Reserved
 
 </div>
 
