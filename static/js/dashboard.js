@@ -1,4 +1,13 @@
-console.log("Dashboard Loaded Successfully 🚀");
+console.log("Dashboard loaded successfully.");
+
+if (typeof Chart !== "undefined") {
+    Chart.defaults.font.family = "Inter, sans-serif";
+    Chart.defaults.color = "#5F6F67";
+    Chart.overrides.pie = Chart.overrides.pie || {};
+    Chart.overrides.pie.plugins = Chart.overrides.pie.plugins || {};
+}
+
+const libraryPalette = ["#2E3B8C", "#F0A202", "#E5484D", "#1E9BC7", "#61637E", "#FFD873", "#4152AD", "#B8790A"];
 
 function updateClock() {
 
@@ -92,9 +101,10 @@ if (typeof categoryData !== "undefined") {
                 labels: categoryData.map(item => item[0]),
 
                 datasets: [{
-
-                    data: categoryData.map(item => item[1])
-
+                    data: categoryData.map(item => item[1]),
+                    backgroundColor: libraryPalette,
+                    borderColor: "#F5FAF7",
+                    borderWidth: 2
                 }]
 
             },
@@ -144,7 +154,9 @@ if (typeof borrowData !== "undefined") {
 
                     label: "Books",
 
-                    data: borrowData.map(item => item[1])
+                    data: borrowData.map(item => item[1]),
+                    backgroundColor: "#2E3B8C",
+                    borderRadius: 4
 
                 }]
 
