@@ -35,11 +35,15 @@ import mysql.connector
 from flask import Flask, render_template, request, redirect, flash, session
 from werkzeug.security import generate_password_hash, check_password_hash
 
-
+# =========================================================
+# App Configuration
+# =========================================================
 
 app = Flask(__name__)
 
-
+# Secret key / DB credentials pulled from environment variables where possible.
+# Fallbacks preserve original behavior for local/dev use, but should be
+# replaced with real secrets via environment variables in production.
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "library_secret_key")
 
 app.config["SESSION_COOKIE_HTTPONLY"] = True
@@ -52,11 +56,14 @@ DB_CONFIG = {
     "database": os.environ.get("DB_NAME"),
 }
 
-
+# Standard loan period (in days) applied when a book is borrowed, and how
+# many days out a "due soon" notification should start warning a student.
 DEFAULT_LOAN_DAYS = 14
 DUE_SOON_WINDOW_DAYS = 3
 
-
+# Email (SMTP) configuration for due-date reminder emails. All pulled from
+# environment variables; email sending is silently disabled if SMTP_HOST
+# isn't configured, so the app keeps working fine without it.
 SMTP_HOST = os.environ.get("SMTP_HOST")
 SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
 SMTP_USERNAME = os.environ.get("SMTP_USERNAME")
@@ -66,17 +73,28 @@ SMTP_FROM_EMAIL = os.environ.get("SMTP_FROM_EMAIL", SMTP_USERNAME)
 SMTP_FROM_NAME = os.environ.get("SMTP_FROM_NAME", "Central Library")
 EMAIL_NOTIFICATIONS_ENABLED = bool(SMTP_HOST and SMTP_FROM_EMAIL)
 
-
+# =========================================================
+# Database Connection
+# =========================================================
 
 db = mysql.connector.connect(**DB_CONFIG)
 
-
+# This app uses a single long-lived connection shared across every request
+# (rather than one connection per request). Without autocommit, MySQL's
+# default REPEATABLE READ isolation means a read-only page (e.g. a
+# dashboard) can keep seeing an old "snapshot" of the data until some
+# other query happens to commit - which can make counts (borrowed books,
+# overdue books, etc.) look stuck/stale even after the underlying data
+# has changed. Autocommit makes every statement see the latest committed
+# data immediately, which is what a simple CRUD app like this wants.
 db.autocommit = True
 
 cursor = db.cursor()
 
 
-
+# =========================================================
+# Decorators (replace repeated session/role checks)
+# =========================================================
 
 def login_required(f):
     """Require an active admin session for a route."""
@@ -120,7 +138,9 @@ def student_login_required(f):
     return wrapper
 
 
-
+# =========================================================
+# Helper Functions
+# =========================================================
 
 def create_pdf(title, headers, data):
     buffer = io.BytesIO()
@@ -313,7 +333,9 @@ def ensure_notification_tracking_column():
             """)
             db.commit()
     except Exception as e:
-       
+        # Don't block app startup if this fails for any reason (e.g.
+        # restricted DB permissions) - email reminders will just resend
+        # more often than ideal until it's added.
         print(f"[warning] Could not verify/add last_notified_date column: {e}")
 
 
@@ -490,11 +512,15 @@ def inject_student_notifications():
     return dict(student_notifications=[], student_notif_count=0, student_overdue_count=0)
 
 
-
+# Ensure the tracking column used for email reminders exists. Runs once
+# when the app module loads (works the same under `python app.py` and
+# under a production WSGI server).
 ensure_notification_tracking_column()
 
 
-
+# =========================================================
+# Auth Routes
+# =========================================================
 @app.route("/")
 def landing():
 
@@ -513,11 +539,14 @@ def login():
             stored_password = admin[3]
             password_ok = False
 
-           
+            # Hashed passwords (current standard)
             if stored_password.startswith("scrypt:") or stored_password.startswith("pbkdf2:"):
                 password_ok = check_password_hash(stored_password, password)
             else:
-               
+                # Temporary support for legacy plain-text passwords.
+                # NOTE: this path should be removed once all accounts are
+                # migrated to hashed passwords - kept here only for
+                # backward compatibility with existing data.
                 password_ok = stored_password == password
 
             if password_ok:
@@ -537,7 +566,9 @@ def logout():
     flash("Logged out successfully!", "success")
     return redirect("/login")
 
-
+# =========================================================
+# Student Authentication
+# =========================================================
 
 @app.route("/student_login", methods=["GET", "POST"])
 def student_login():
@@ -598,7 +629,7 @@ def student_dashboard():
 
     student_id = session["student_id"]
 
-  
+    # Student details
     cursor.execute("""
         SELECT full_name, email, phone
         FROM members
@@ -607,7 +638,7 @@ def student_dashboard():
 
     student = cursor.fetchone()
 
-    
+    # Currently borrowed books
     cursor.execute("""
         SELECT COUNT(*)
         FROM borrow_history bh
@@ -618,12 +649,15 @@ def student_dashboard():
 
     borrowed_books = cursor.fetchone()[0]
 
-  
+    # Due-soon / overdue notifications (uses the library's simulated date,
+    # so this stays in sync with the admin's Date Simulator)
     notifications = get_student_notifications(student_id)
     due_soon = sum(1 for n in notifications if n["type"] == "due_soon")
     overdue_count = sum(1 for n in notifications if n["type"] == "overdue")
 
-   
+    # Best-effort email reminder for any due-soon/overdue books. Throttled
+    # to once per day per book via last_notified_date, and never allowed
+    # to break the page if email isn't configured or sending fails.
     try:
         send_due_date_reminder_emails(member_id=student_id)
     except Exception as e:
@@ -784,7 +818,9 @@ def student_books():
     )
 
 
-
+# =========================================================
+# Dashboard
+# =========================================================
 
 @app.route("/dashboard")
 @login_required
@@ -792,7 +828,9 @@ def home():
 
     library_date = get_library_date()
 
-   
+    # -----------------------------
+    # Search / List Books
+    # -----------------------------
     search = request.args.get("search")
 
     if search:
@@ -815,6 +853,9 @@ def home():
 
     books = cursor.fetchall()
 
+    # -----------------------------
+    # Dashboard Statistics
+    # -----------------------------
 
     cursor.execute("SELECT COUNT(*) FROM books")
     total_books = cursor.fetchone()[0]
@@ -853,7 +894,9 @@ def home():
 
     overdue_books = cursor.fetchone()[0]
 
-  
+    # -----------------------------
+    # Outstanding Fine
+    # -----------------------------
 
     cursor.execute(
         """
@@ -865,7 +908,10 @@ def home():
 
     outstanding_fine = cursor.fetchone()[0]
 
-   
+    # -----------------------------
+    # Returned Books
+    # -----------------------------
+
     cursor.execute(
         """
         SELECT COUNT(*)
@@ -876,7 +922,9 @@ def home():
 
     returned_books = cursor.fetchone()[0]
 
-
+    # -----------------------------
+    # Books by Category
+    # -----------------------------
 
     cursor.execute(
         """
@@ -889,7 +937,9 @@ def home():
 
     category_data = cursor.fetchall()
 
-  
+    # -----------------------------
+    # Borrow Status Breakdown
+    # -----------------------------
 
     cursor.execute(
         """
@@ -901,7 +951,9 @@ def home():
 
     borrow_stats = cursor.fetchall()
 
-
+    # -----------------------------
+    # Top Borrowed Books
+    # -----------------------------
 
     cursor.execute(
         """
@@ -923,7 +975,9 @@ def home():
 
     top_books = cursor.fetchall()
 
-   
+    # -----------------------------
+    # Recent Activities
+    # -----------------------------
 
     cursor.execute(
         """
@@ -954,7 +1008,9 @@ def home():
         top_books=top_books,
     )
 
-
+# =========================================================
+# Book Routes
+# =========================================================
 
 @app.route("/add")
 @login_required
@@ -1040,6 +1096,9 @@ def delete_book(id):
     return redirect("/dashboard")
 
 
+# =========================================================
+# Borrow / Return Routes
+# =========================================================
 
 @app.route("/borrow/<int:id>")
 @login_required
@@ -1075,7 +1134,9 @@ def borrow_book(id):
 
     today = get_library_date()
 
-   
+    # Borrow date can be manually entered by the admin (e.g. to backdate an
+    # already-issued book). Falls back to today's library date if left
+    # blank or if the value can't be parsed.
     borrow_date_raw = request.form.get("borrow_date", "").strip()
 
     if borrow_date_raw:
@@ -1231,6 +1292,9 @@ def receive_payment(id):
     return redirect("/borrow_history")
 
 
+# =========================================================
+# Member Routes
+# =========================================================
 
 @app.route("/members")
 @login_required
@@ -1442,6 +1506,9 @@ def reset_member_password(id):
     )
 
 
+# =========================================================
+# Borrow History
+# =========================================================
 
 @app.route("/borrow_history")
 @login_required
@@ -1516,6 +1583,9 @@ def borrow_history():
     )
 
 
+# =========================================================
+# Library Date Controls
+# =========================================================
 
 @app.route("/update_library_date", methods=["POST"])
 @login_required
@@ -1546,6 +1616,9 @@ def reset_library_date():
     return redirect("/dashboard")
 
 
+# =========================================================
+# Admin Management
+# =========================================================
 
 @app.route("/admins")
 @login_required
@@ -1657,6 +1730,9 @@ def delete_admin(id):
     return redirect("/admins")
 
 
+# =========================================================
+# Activity Logs
+# =========================================================
 
 @app.route("/activity_logs")
 @role_required("Head Librarian")
@@ -1687,6 +1763,9 @@ def activity_logs():
     return render_template("activity_logs.html", logs=logs)
 
 
+# =========================================================
+# Reports
+# =========================================================
 
 @app.route("/reports")
 @role_required("Head Librarian", "Librarian")
@@ -1929,6 +2008,9 @@ def export_complete():
         mimetype="application/pdf",
     )
 
+# =========================================================
+# Error Handlers
+# =========================================================
 
 @app.errorhandler(404)
 def page_not_found(e):
@@ -1940,7 +2022,9 @@ def internal_server_error(e):
     return render_template("500.html"), 500
 
 
-
+# =========================================================
+# Entry Point
+# =========================================================
 
 if __name__ == "__main__":
     app.run(
