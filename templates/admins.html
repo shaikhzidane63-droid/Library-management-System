@@ -8,42 +8,57 @@
     <meta name="viewport"
           content="width=device-width, initial-scale=1.0">
 
-    <title>Admin Management</title>
+    <link rel="icon" href="{{ url_for('static', filename='images/college_logo.png') }}">
+
+<title>Admin Management</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
           rel="stylesheet">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+          rel="stylesheet">
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
 
 </head>
 
 <body class="bg-light">
 
-<div class="container mt-4">
+{% include "_admin_nav.html" %}
+
+
+<div id="mainContent" class="container mt-4">
 
     <!-- ========================= -->
     <!-- PAGE TITLE -->
     <!-- ========================= -->
 
-    <h1 class="text-center text-primary fw-bold">
+    <div class="page-header">
 
-        👨‍💼 Admin Management
+        <div class="page-header-icon"><i class="bi bi-person-badge-fill"></i></div>
 
-    </h1>
+        <div>
 
-    <p class="text-center text-muted mb-4">
+            <h1>Admin Management</h1>
 
-        Manage administrators and staff roles
+            <p>Manage administrators and staff roles</p>
 
-    </p>
+        </div>
+
+    </div>
 
     <!-- ========================= -->
     <!-- USER INFO -->
     <!-- ========================= -->
 
-    <div class="alert alert-primary shadow-sm d-flex justify-content-between align-items-center">
+    <div class="session-strip">
 
         <div>
 
-            👋 Welcome,
+            <span class="pulse-dot"></span>
+            <i class="bi bi-person-circle"></i>
+            Welcome,
 
             <strong>{{ session["admin"] }}</strong>
 
@@ -103,7 +118,7 @@
                 href="/dashboard"
                 class="btn btn-secondary">
 
-                ← Dashboard
+                <i class="bi bi-arrow-left"></i> Dashboard
 
             </a>
 
@@ -115,7 +130,7 @@
                 href="/add_admin"
                 class="btn btn-success">
 
-                ➕ Add New Admin
+                <i class="bi bi-person-plus-fill"></i> Add New Admin
 
             </a>
 
@@ -194,16 +209,16 @@
                         href="/edit_admin/{{ admin[0] }}"
                         class="btn btn-warning btn-sm">
 
-                        ✏ Edit
+                        <i class="bi bi-pencil-fill"></i> Edit
 
                     </a>
 
                     <a
                         href="/delete_admin/{{ admin[0] }}"
                         class="btn btn-danger btn-sm"
-                        onclick="return confirm('Delete this admin?')">
+                        data-confirm="Delete admin '{{ admin[1] }}'? This action cannot be undone.">
 
-                        🗑 Delete
+                        <i class="bi bi-trash-fill"></i> Delete
 
                     </a>
 
@@ -220,6 +235,8 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+{% include "_footer.html" %}
 
 </body>
 
