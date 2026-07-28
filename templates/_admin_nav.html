@@ -1,0 +1,139 @@
+<script>
+(function(){
+    try{
+        if(localStorage.getItem('theme') === 'dark'){
+            document.body.setAttribute('data-theme','dark');
+        }
+    }catch(e){}
+})();
+</script>
+
+<a href="#mainContent" class="visually-hidden-focusable position-absolute top-0 start-0 bg-warning text-dark p-2" style="z-index:2100;">
+    Skip to main content
+</a>
+
+<div id="pageLoadBar"></div>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow sticky-top">
+
+<div class="container-fluid">
+
+<a class="navbar-brand d-flex align-items-center" href="/dashboard">
+
+<img src="{{ url_for('static', filename='images/college_logo.png') }}" width="40" class="me-2">
+
+<div>
+<div class="fw-bold">Central Library</div>
+<small>MPSS College</small>
+</div>
+
+</a>
+
+<button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+        data-bs-target="#mainNavMenu" aria-controls="mainNavMenu"
+        aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+</button>
+
+<div class="collapse navbar-collapse" id="mainNavMenu">
+
+    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+
+        <li class="nav-item">
+            <a class="nav-link {% if request.path == '/dashboard' %}active{% endif %}" href="/dashboard" {% if request.path == '/dashboard' %}aria-current="page"{% endif %}>
+                <i class="bi bi-speedometer2"></i> Dashboard
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link {% if request.path == '/add' %}active{% endif %}" href="/add" {% if request.path == '/add' %}aria-current="page"{% endif %}>
+                <i class="bi bi-journal-plus"></i> Add Book
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link {% if request.path == '/members' %}active{% endif %}" href="/members" {% if request.path == '/members' %}aria-current="page"{% endif %}>
+                <i class="bi bi-people-fill"></i> Members
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link {% if request.path == '/borrow_history' %}active{% endif %}" href="/borrow_history" {% if request.path == '/borrow_history' %}aria-current="page"{% endif %}>
+                <i class="bi bi-clock-history"></i> Borrow History
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link {% if request.path == '/reports' %}active{% endif %}" href="/reports" {% if request.path == '/reports' %}aria-current="page"{% endif %}>
+                <i class="bi bi-bar-chart-fill"></i> Reports
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link {% if request.path == '/admins' %}active{% endif %}" href="/admins" {% if request.path == '/admins' %}aria-current="page"{% endif %}>
+                <i class="bi bi-person-badge-fill"></i> Admins
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link {% if request.path == '/activity_logs' %}active{% endif %}" href="/activity_logs" {% if request.path == '/activity_logs' %}aria-current="page"{% endif %}>
+                <i class="bi bi-clipboard-data-fill"></i> Activity Logs
+            </a>
+        </li>
+
+    </ul>
+
+    <div class="d-flex align-items-center gap-3 flex-wrap">
+
+        <button type="button" class="btn btn-outline-light btn-sm theme-toggle" id="themeToggle" title="Toggle dark mode">
+            <i class="bi bi-moon-stars-fill"></i>
+            <i class="bi bi-sun-fill"></i>
+        </button>
+
+        {% if session.get('admin') %}
+        <span class="text-white small">
+            <span class="pulse-dot"></span>
+            <i class="bi bi-person-circle"></i>
+            {{ session.get('admin') }}
+            <span class="badge bg-light text-dark ms-1">{{ session.get('role') }}</span>
+        </span>
+        {% endif %}
+
+        <a href="/logout" class="btn btn-light btn-sm">
+            <i class="bi bi-box-arrow-right"></i> Log out
+        </a>
+
+    </div>
+
+</div>
+
+</div>
+
+</nav>
+
+<button id="backToTop" title="Back to top">
+    <i class="bi bi-arrow-up"></i>
+</button>
+
+<!-- Shared styled confirmation modal (replaces native browser confirm()) -->
+<div class="modal fade" id="confirmActionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill text-danger"></i> Please Confirm</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="confirmActionMessage" class="mb-0">Are you sure?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmActionBtn" data-bs-dismiss="modal">
+                    <i class="bi bi-trash-fill"></i> Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/site.js') }}"></script>
