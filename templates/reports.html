@@ -12,13 +12,14 @@ Library Reports
 
 <h1 class="fw-bold text-primary">
 
-📊 Library Reports Dashboard
+<i class="bi bi-bar-chart-fill"></i>
+Library Reports Dashboard
 
 </h1>
 
 <p class="text-muted">
 
-Central Library • MPSS College of Commerce & Science
+Central Library &middot; MPSS College of Commerce &amp; Science
 
 </p>
 
@@ -28,7 +29,7 @@ Central Library • MPSS College of Commerce & Science
 
 <a href="/dashboard" class="btn btn-secondary">
 
-← Dashboard
+<i class="bi bi-arrow-left"></i> Dashboard
 
 </a>
 
@@ -154,7 +155,8 @@ Central Library • MPSS College of Commerce & Science
 
 <h3 class="text-primary mb-4">
 
-📄 Export Reports
+<i class="bi bi-file-earmark-arrow-down-fill"></i>
+Export Reports
 
 </h3>
 
@@ -164,7 +166,7 @@ Central Library • MPSS College of Commerce & Science
 
 <a href="/export/books" class="btn btn-outline-primary w-100 py-3">
 
-📚 Export Books Report
+<i class="bi bi-book-half"></i> Export Books Report
 
 </a>
 
@@ -174,7 +176,7 @@ Central Library • MPSS College of Commerce & Science
 
 <a href="/export/members" class="btn btn-outline-success w-100 py-3">
 
-👥 Export Members Report
+<i class="bi bi-people-fill"></i> Export Members Report
 
 </a>
 
@@ -184,7 +186,7 @@ Central Library • MPSS College of Commerce & Science
 
 <a href="/export/borrow" class="btn btn-outline-warning w-100 py-3">
 
-📖 Export Borrow History
+<i class="bi bi-clock-history"></i> Export Borrow History
 
 </a>
 
@@ -194,7 +196,7 @@ Central Library • MPSS College of Commerce & Science
 
 <a href="/export/fines" class="btn btn-outline-danger w-100 py-3">
 
-💰 Export Fine Report
+<i class="bi bi-cash-coin"></i> Export Fine Report
 
 </a>
 
@@ -204,11 +206,67 @@ Central Library • MPSS College of Commerce & Science
 
 <a href="/export/complete" class="btn btn-outline-dark w-100 py-3">
 
-📊 Complete Library Report
+<i class="bi bi-bar-chart-fill"></i> Complete Library Report
 
 </a>
 
 </div>
+
+</div>
+
+</div>
+
+<hr class="my-5">
+
+<h3 class="text-primary mb-4">
+
+<i class="bi bi-envelope-fill"></i>
+Due-Date Email Reminders
+
+</h3>
+
+<div class="card border-0 shadow-sm">
+
+<div class="card-body d-flex align-items-center justify-content-between flex-wrap gap-3">
+
+<div>
+
+<p class="mb-1">
+
+Email students whose books are due soon or overdue. Each student is only
+emailed once per day for the same book, so this is safe to run as often as you like.
+
+</p>
+
+{% if email_enabled %}
+
+<span class="badge bg-success">
+
+<i class="bi bi-check-circle-fill"></i> Email is configured
+
+</span>
+
+{% else %}
+
+<span class="badge bg-warning text-dark">
+
+<i class="bi bi-exclamation-triangle-fill"></i> Email is not configured (set SMTP environment variables)
+
+</span>
+
+{% endif %}
+
+</div>
+
+<form action="/send_due_reminders" method="POST" class="m-0">
+
+<button type="submit" class="btn btn-primary" {% if not email_enabled %}disabled{% endif %}>
+
+<i class="bi bi-send-fill"></i> Send Reminder Emails Now
+
+</button>
+
+</form>
 
 </div>
 
