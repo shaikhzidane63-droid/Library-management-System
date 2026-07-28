@@ -1,0 +1,154 @@
+<script>
+(function(){
+    try{
+        if(localStorage.getItem('theme') === 'dark'){
+            document.body.setAttribute('data-theme','dark');
+        }
+    }catch(e){}
+})();
+</script>
+
+<a href="#mainContent" class="visually-hidden-focusable position-absolute top-0 start-0 bg-warning text-dark p-2" style="z-index:2100;">
+    Skip to main content
+</a>
+
+<div id="pageLoadBar"></div>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow sticky-top">
+
+<div class="container">
+
+<a class="navbar-brand fw-bold" href="/student_dashboard">
+    <i class="bi bi-journal-bookmark-fill"></i> Digital Library
+</a>
+
+<button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+        data-bs-target="#studentNavMenu" aria-controls="studentNavMenu"
+        aria-expanded="false" aria-label="Toggle navigation">
+    <span class="navbar-toggler-icon"></span>
+</button>
+
+<div class="collapse navbar-collapse" id="studentNavMenu">
+
+    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+
+        <li class="nav-item">
+            <a class="nav-link {% if request.path == '/student_dashboard' %}active{% endif %}" href="/student_dashboard" {% if request.path == '/student_dashboard' %}aria-current="page"{% endif %}>
+                <i class="bi bi-speedometer2"></i> Dashboard
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link {% if request.path == '/student_books' %}active{% endif %}" href="/student_books" {% if request.path == '/student_books' %}aria-current="page"{% endif %}>
+                <i class="bi bi-book-half"></i> Browse Books
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link {% if request.path == '/student_profile' %}active{% endif %}" href="/student_profile" {% if request.path == '/student_profile' %}aria-current="page"{% endif %}>
+                <i class="bi bi-person-circle"></i> My Profile
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link {% if request.path == '/student_change_password' %}active{% endif %}" href="/student_change_password" {% if request.path == '/student_change_password' %}aria-current="page"{% endif %}>
+                <i class="bi bi-key-fill"></i> Change Password
+            </a>
+        </li>
+
+    </ul>
+
+    <div class="d-flex align-items-center gap-3">
+
+        <button type="button" class="btn btn-outline-light btn-sm theme-toggle" id="themeToggle" title="Toggle dark mode">
+            <i class="bi bi-moon-stars-fill"></i>
+            <i class="bi bi-sun-fill"></i>
+        </button>
+
+        {% if session.get('student_name') %}
+
+        <div class="dropdown">
+
+            <button
+                class="btn btn-outline-light btn-sm position-relative notif-bell"
+                type="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+                title="Notifications">
+
+                <i class="bi bi-bell-fill"></i>
+
+                {% if student_notif_count and student_notif_count > 0 %}
+                <span class="badge rounded-pill bg-danger notif-badge">
+                    {{ student_notif_count }}
+                </span>
+                {% endif %}
+
+            </button>
+
+            <ul class="dropdown-menu dropdown-menu-end notif-dropdown p-2">
+
+                <li class="px-2 py-1 text-muted small fw-bold text-uppercase">
+                    Book Due Notifications
+                </li>
+
+                {% if student_notifications and student_notifications|length > 0 %}
+
+                    {% for n in student_notifications %}
+                    <li>
+                        <div class="notif-item {% if n.type == 'overdue' %}notif-overdue{% else %}notif-due-soon{% endif %}">
+                            <i class="bi {% if n.type == 'overdue' %}bi-exclamation-triangle-fill{% else %}bi-hourglass-split{% endif %}"></i>
+                            <div>
+                                <div class="fw-semibold">{{ n.title }}</div>
+                                <div class="small">
+                                    {% if n.type == 'overdue' %}
+                                        Overdue by {{ n.days }} day{{ 's' if n.days != 1 else '' }} &middot; was due {{ n.due_date }}
+                                    {% else %}
+                                        {% if n.days == 0 %}
+                                            Due today
+                                        {% else %}
+                                            Due in {{ n.days }} day{{ 's' if n.days != 1 else '' }} &middot; {{ n.due_date }}
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                    {% endfor %}
+
+                {% else %}
+
+                    <li class="px-2 py-3 text-center text-muted small">
+                        <i class="bi bi-check-circle"></i> You're all caught up.
+                    </li>
+
+                {% endif %}
+
+            </ul>
+
+        </div>
+
+        <span class="text-white small">
+            <span class="pulse-dot"></span>
+            <i class="bi bi-person-circle"></i>
+            {{ session.get('student_name') }}
+        </span>
+        {% endif %}
+
+        <a href="/student_logout" class="btn btn-light btn-sm">
+            <i class="bi bi-box-arrow-right"></i> Log out
+        </a>
+
+    </div>
+
+</div>
+
+</div>
+
+</nav>
+
+<button id="backToTop" title="Back to top">
+    <i class="bi bi-arrow-up"></i>
+</button>
+
+<script src="{{ url_for('static', filename='js/site.js') }}"></script>
