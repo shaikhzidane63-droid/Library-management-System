@@ -27,19 +27,19 @@ from reportlab.platypus import (
 import io
 from datetime import datetime
 
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+
 import mysql.connector
 from flask import Flask, render_template, request, redirect, flash, session
 from werkzeug.security import generate_password_hash, check_password_hash
 
-# =========================================================
-# App Configuration
-# =========================================================
+
 
 app = Flask(__name__)
 
-# Secret key / DB credentials pulled from environment variables where possible.
-# Fallbacks preserve original behavior for local/dev use, but should be
-# replaced with real secrets via environment variables in production.
+
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "library_secret_key")
 
 app.config["SESSION_COOKIE_HTTPONLY"] = True
@@ -52,17 +52,31 @@ DB_CONFIG = {
     "database": os.environ.get("DB_NAME"),
 }
 
-# =========================================================
-# Database Connection
-# =========================================================
+
+DEFAULT_LOAN_DAYS = 14
+DUE_SOON_WINDOW_DAYS = 3
+
+
+SMTP_HOST = os.environ.get("SMTP_HOST")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
+SMTP_USERNAME = os.environ.get("SMTP_USERNAME")
+SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD")
+SMTP_USE_TLS = os.environ.get("SMTP_USE_TLS", "true").lower() != "false"
+SMTP_FROM_EMAIL = os.environ.get("SMTP_FROM_EMAIL", SMTP_USERNAME)
+SMTP_FROM_NAME = os.environ.get("SMTP_FROM_NAME", "Central Library")
+EMAIL_NOTIFICATIONS_ENABLED = bool(SMTP_HOST and SMTP_FROM_EMAIL)
+
+
 
 db = mysql.connector.connect(**DB_CONFIG)
+
+
+db.autocommit = True
+
 cursor = db.cursor()
 
 
-# =========================================================
-# Decorators (replace repeated session/role checks)
-# =========================================================
+
 
 def login_required(f):
     """Require an active admin session for a route."""
@@ -85,7 +99,7 @@ def role_required(*allowed_roles):
             if "admin" not in session:
                 return redirect("/login")
             if session.get("role") not in allowed_roles:
-                flash("⛔ Access Denied!", "danger")
+                flash("Access Denied!", "danger")
                 return redirect("/dashboard")
             return f(*args, **kwargs)
 
@@ -106,9 +120,7 @@ def student_login_required(f):
     return wrapper
 
 
-# =========================================================
-# Helper Functions
-# =========================================================
+
 
 def create_pdf(title, headers, data):
     buffer = io.BytesIO()
@@ -234,9 +246,255 @@ def get_library_date():
     return cursor.fetchone()[0]
 
 
-# =========================================================
-# Auth Routes
-# =========================================================
+def get_student_notifications(student_id):
+    """
+    Return due-soon / overdue notifications for a student's currently
+    borrowed books, based on the library's (possibly simulated) date.
+    """
+
+    today = get_library_date()
+    warning_cutoff = today + timedelta(days=DUE_SOON_WINDOW_DAYS)
+
+    cursor.execute(
+        """
+        SELECT b.title, bh.due_date
+        FROM borrow_history bh
+        JOIN books b ON bh.book_id = b.id
+        WHERE bh.member_id=%s
+        AND bh.status='Borrowed'
+        AND bh.due_date <= %s
+        ORDER BY bh.due_date ASC
+        """,
+        (student_id, warning_cutoff),
+    )
+
+    notifications = []
+
+    for title, due_date in cursor.fetchall():
+        if due_date < today:
+            notifications.append({
+                "title": title,
+                "due_date": due_date,
+                "type": "overdue",
+                "days": (today - due_date).days,
+            })
+        else:
+            notifications.append({
+                "title": title,
+                "due_date": due_date,
+                "type": "due_soon",
+                "days": (due_date - today).days,
+            })
+
+    return notifications
+
+
+def ensure_notification_tracking_column():
+    """
+    Adds a 'last_notified_date' column to borrow_history if it doesn't
+    already exist. Used to avoid emailing a student more than once a day
+    about the same borrowed book. Safe to call repeatedly.
+    """
+
+    try:
+        cursor.execute("""
+            SELECT COUNT(*)
+            FROM information_schema.columns
+            WHERE table_schema = DATABASE()
+            AND table_name = 'borrow_history'
+            AND column_name = 'last_notified_date'
+        """)
+        exists = cursor.fetchone()[0]
+
+        if not exists:
+            cursor.execute("""
+                ALTER TABLE borrow_history
+                ADD COLUMN last_notified_date DATE NULL
+            """)
+            db.commit()
+    except Exception as e:
+       
+        print(f"[warning] Could not verify/add last_notified_date column: {e}")
+
+
+def send_email(to_email, to_name, subject, html_body):
+    """
+    Send a single HTML email via SMTP. Returns True on success, False if
+    email isn't configured or sending failed (never raises, so callers
+    can fire-and-forget this without risking a page-load crash).
+    """
+
+    if not EMAIL_NOTIFICATIONS_ENABLED or not to_email:
+        return False
+
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = f"{SMTP_FROM_NAME} <{SMTP_FROM_EMAIL}>"
+        msg["To"] = to_email
+
+        msg.attach(MIMEText(html_body, "html"))
+
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=10) as server:
+            if SMTP_USE_TLS:
+                server.starttls()
+            if SMTP_USERNAME and SMTP_PASSWORD:
+                server.login(SMTP_USERNAME, SMTP_PASSWORD)
+            server.sendmail(SMTP_FROM_EMAIL, [to_email], msg.as_string())
+
+        return True
+
+    except Exception as e:
+        print(f"[warning] Failed to send email to {to_email}: {e}")
+        return False
+
+
+def build_due_date_email(student_name, book_title, notif_type, due_date, days):
+    """Build the subject + HTML body for a due-date reminder email."""
+
+    if notif_type == "overdue":
+        subject = f"Overdue: '{book_title}' is now {days} day{'s' if days != 1 else ''} overdue"
+        headline = "This book is overdue"
+        message = (
+            f"'<strong>{book_title}</strong>' was due on <strong>{due_date}</strong> "
+            f"and is now <strong>{days} day{'s' if days != 1 else ''} overdue</strong>. "
+            f"Fines accrue for each day it remains unreturned — please return it to "
+            f"the library as soon as possible."
+        )
+        color = "#E5484D"
+    elif days == 0:
+        subject = f"Due today: '{book_title}'"
+        headline = "This book is due today"
+        message = (
+            f"'<strong>{book_title}</strong>' is due back at the library "
+            f"<strong>today ({due_date})</strong>. Please return or renew it to avoid a fine."
+        )
+        color = "#F0A202"
+    else:
+        subject = f"Reminder: '{book_title}' is due in {days} day{'s' if days != 1 else ''}"
+        headline = "This book is due soon"
+        message = (
+            f"'<strong>{book_title}</strong>' is due back at the library in "
+            f"<strong>{days} day{'s' if days != 1 else ''}</strong>, on <strong>{due_date}</strong>. "
+            f"Please return or renew it before then to avoid a fine."
+        )
+        color = "#F0A202"
+
+    html_body = f"""
+    <div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;">
+        <div style="background:#202868;padding:20px 24px;border-radius:8px 8px 0 0;">
+            <span style="color:#FFD873;font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:bold;">
+                Central Library
+            </span>
+            <h2 style="color:#ffffff;margin:8px 0 0;font-size:20px;">{headline}</h2>
+        </div>
+        <div style="border:1px solid #DCDEEE;border-top:none;border-radius:0 0 8px 8px;padding:24px;">
+            <p style="font-size:15px;color:#1B1F3B;margin:0 0 16px;">Hi {student_name},</p>
+            <p style="font-size:15px;color:#1B1F3B;line-height:1.6;margin:0 0 16px;">
+                {message}
+            </p>
+            <div style="border-left:4px solid {color};background:#F6F6FB;padding:12px 16px;border-radius:4px;">
+                <strong style="color:{color};">{book_title}</strong><br>
+                <span style="color:#61637E;font-size:14px;">Due date: {due_date}</span>
+            </div>
+            <p style="font-size:13px;color:#61637E;margin:24px 0 0;">
+                This is an automated message from the Central Library Management System.
+                Please do not reply to this email.
+            </p>
+        </div>
+    </div>
+    """
+
+    return subject, html_body
+
+
+def send_due_date_reminder_emails(member_id=None):
+    """
+    Emails students about books that are due soon or overdue, at most once
+    per day per borrow record (tracked via last_notified_date). If
+    member_id is given, only that student's books are checked - otherwise
+    every currently-borrowed book in the system is checked.
+
+    Returns the number of emails successfully sent.
+    """
+
+    if not EMAIL_NOTIFICATIONS_ENABLED:
+        return 0
+
+    today = get_library_date()
+    warning_cutoff = today + timedelta(days=DUE_SOON_WINDOW_DAYS)
+
+    query = """
+        SELECT bh.id, b.title, bh.due_date, m.full_name, m.email
+        FROM borrow_history bh
+        JOIN books b ON bh.book_id = b.id
+        JOIN members m ON bh.member_id = m.id
+        WHERE bh.status = 'Borrowed'
+        AND bh.due_date <= %s
+        AND (bh.last_notified_date IS NULL OR bh.last_notified_date < %s)
+    """
+    params = [warning_cutoff, today]
+
+    if member_id is not None:
+        query += " AND bh.member_id = %s"
+        params.append(member_id)
+
+    cursor.execute(query, tuple(params))
+    rows = cursor.fetchall()
+
+    sent_count = 0
+
+    for record_id, title, due_date, student_name, student_email in rows:
+        if due_date < today:
+            notif_type, days = "overdue", (today - due_date).days
+        else:
+            notif_type, days = "due_soon", (due_date - today).days
+
+        subject, html_body = build_due_date_email(
+            student_name, title, notif_type, due_date, days
+        )
+
+        if send_email(student_email, student_name, subject, html_body):
+            sent_count += 1
+            cursor.execute(
+                "UPDATE borrow_history SET last_notified_date=%s WHERE id=%s",
+                (today, record_id),
+            )
+            db.commit()
+
+    return sent_count
+
+
+@app.context_processor
+def inject_student_notifications():
+    """
+    Makes due-soon / overdue notifications available to every template
+    (used by the student navbar's notification bell) without every route
+    needing to fetch and pass it manually.
+    """
+
+    if session.get("student_id"):
+        try:
+            notifications = get_student_notifications(session["student_id"])
+        except Exception:
+            notifications = []
+
+        overdue_count = sum(1 for n in notifications if n["type"] == "overdue")
+
+        return dict(
+            student_notifications=notifications,
+            student_notif_count=len(notifications),
+            student_overdue_count=overdue_count,
+        )
+
+    return dict(student_notifications=[], student_notif_count=0, student_overdue_count=0)
+
+
+
+ensure_notification_tracking_column()
+
+
+
 @app.route("/")
 def landing():
 
@@ -255,23 +513,20 @@ def login():
             stored_password = admin[3]
             password_ok = False
 
-            # Hashed passwords (current standard)
+           
             if stored_password.startswith("scrypt:") or stored_password.startswith("pbkdf2:"):
                 password_ok = check_password_hash(stored_password, password)
             else:
-                # Temporary support for legacy plain-text passwords.
-                # NOTE: this path should be removed once all accounts are
-                # migrated to hashed passwords - kept here only for
-                # backward compatibility with existing data.
+               
                 password_ok = stored_password == password
 
             if password_ok:
                 session["admin"] = admin[2]
                 session["role"] = admin[4]
-                flash("✅ Login Successful!", "success")
+                flash("Login Successful!", "success")
                 return redirect("/dashboard")
 
-        flash("❌ Invalid Username or Password!", "danger")
+        flash("Invalid Username or Password!", "danger")
 
     return render_template("login.html")
 
@@ -282,9 +537,7 @@ def logout():
     flash("Logged out successfully!", "success")
     return redirect("/login")
 
-# =========================================================
-# Student Authentication
-# =========================================================
+
 
 @app.route("/student_login", methods=["GET", "POST"])
 def student_login():
@@ -318,11 +571,11 @@ def student_login():
                 session["student_name"] = student_name
                 session["student_username"] = username
 
-                flash(f"👋 Welcome {student_name}!", "success")
+                flash(f"Welcome {student_name}!", "success")
 
                 return redirect("/student_dashboard")
 
-        flash("❌ Invalid Username or Password!", "danger")
+        flash("Invalid Username or Password!", "danger")
 
     return render_template("student_login.html")
 
@@ -335,7 +588,7 @@ def student_logout():
     session.pop("student_name", None)
     session.pop("student_username", None)
 
-    flash("👋 Logged out successfully!", "success")
+    flash("Logged out successfully!", "success")
 
     return redirect("/student_login")
 
@@ -345,7 +598,7 @@ def student_dashboard():
 
     student_id = session["student_id"]
 
-    # Student details
+  
     cursor.execute("""
         SELECT full_name, email, phone
         FROM members
@@ -354,26 +607,27 @@ def student_dashboard():
 
     student = cursor.fetchone()
 
-    # Currently borrowed books
+    
     cursor.execute("""
         SELECT COUNT(*)
-        FROM borrow_history
-        WHERE member_id=%s
-        AND status='Borrowed'
+        FROM borrow_history bh
+        JOIN books b ON bh.book_id = b.id
+        WHERE bh.member_id=%s
+        AND bh.status='Borrowed'
     """, (student_id,))
 
     borrowed_books = cursor.fetchone()[0]
 
-    # Books due soon
-    cursor.execute("""
-        SELECT COUNT(*)
-        FROM borrow_history
-        WHERE member_id=%s
-        AND status='Borrowed'
-        AND due_date <= DATE_ADD(CURDATE(), INTERVAL 3 DAY)
-    """, (student_id,))
+  
+    notifications = get_student_notifications(student_id)
+    due_soon = sum(1 for n in notifications if n["type"] == "due_soon")
+    overdue_count = sum(1 for n in notifications if n["type"] == "overdue")
 
-    due_soon = cursor.fetchone()[0]
+   
+    try:
+        send_due_date_reminder_emails(member_id=student_id)
+    except Exception as e:
+        print(f"[warning] Due-date email reminder failed: {e}")
 
     # Total fine
     cursor.execute("""
@@ -406,8 +660,11 @@ def student_dashboard():
         student=student,
         borrowed_books=borrowed_books,
         due_soon=due_soon,
+        overdue_count=overdue_count,
         total_fine=total_fine,
-        recent_books=recent_books
+        recent_books=recent_books,
+        notifications=notifications,
+        today=get_library_date(),
     )
 
 @app.route("/student_profile")
@@ -446,7 +703,7 @@ def student_change_password():
         confirm_password = request.form["confirm_password"]
 
         if new_password != confirm_password:
-            flash("❌ New passwords do not match!", "danger")
+            flash("New passwords do not match!", "danger")
             return redirect("/student_change_password")
 
         cursor.execute("""
@@ -458,7 +715,7 @@ def student_change_password():
         stored_password = cursor.fetchone()[0]
 
         if not check_password_hash(stored_password, current_password):
-            flash("❌ Current password is incorrect!", "danger")
+            flash("Current password is incorrect!", "danger")
             return redirect("/student_change_password")
 
         new_hash = generate_password_hash(new_password)
@@ -474,7 +731,7 @@ def student_change_password():
 
         db.commit()
 
-        flash("✅ Password updated successfully!", "success")
+        flash("Password updated successfully!", "success")
 
         return redirect("/student_profile")
 
@@ -527,9 +784,7 @@ def student_books():
     )
 
 
-# =========================================================
-# Dashboard
-# =========================================================
+
 
 @app.route("/dashboard")
 @login_required
@@ -537,9 +792,7 @@ def home():
 
     library_date = get_library_date()
 
-    # -----------------------------
-    # Search / List Books
-    # -----------------------------
+   
     search = request.args.get("search")
 
     if search:
@@ -562,9 +815,6 @@ def home():
 
     books = cursor.fetchall()
 
-    # -----------------------------
-    # Dashboard Statistics
-    # -----------------------------
 
     cursor.execute("SELECT COUNT(*) FROM books")
     total_books = cursor.fetchone()[0]
@@ -581,8 +831,10 @@ def home():
     cursor.execute(
         """
         SELECT COUNT(*)
-        FROM borrow_history
-        WHERE status='Borrowed'
+        FROM borrow_history bh
+        JOIN books b ON bh.book_id = b.id
+        JOIN members m ON bh.member_id = m.id
+        WHERE bh.status='Borrowed'
         """
     )
     borrowed_books = cursor.fetchone()[0]
@@ -590,18 +842,18 @@ def home():
     cursor.execute(
         """
         SELECT COUNT(*)
-        FROM borrow_history
-        WHERE status='Borrowed'
-          AND due_date < %s
+        FROM borrow_history bh
+        JOIN books b ON bh.book_id = b.id
+        JOIN members m ON bh.member_id = m.id
+        WHERE bh.status='Borrowed'
+          AND bh.due_date < %s
         """,
         (library_date,),
     )
 
     overdue_books = cursor.fetchone()[0]
 
-    # -----------------------------
-    # Outstanding Fine
-    # -----------------------------
+  
 
     cursor.execute(
         """
@@ -613,10 +865,7 @@ def home():
 
     outstanding_fine = cursor.fetchone()[0]
 
-    # -----------------------------
-    # Returned Books
-    # -----------------------------
-
+   
     cursor.execute(
         """
         SELECT COUNT(*)
@@ -627,9 +876,7 @@ def home():
 
     returned_books = cursor.fetchone()[0]
 
-    # -----------------------------
-    # Books by Category
-    # -----------------------------
+
 
     cursor.execute(
         """
@@ -642,9 +889,7 @@ def home():
 
     category_data = cursor.fetchall()
 
-    # -----------------------------
-    # Borrow Status Breakdown
-    # -----------------------------
+  
 
     cursor.execute(
         """
@@ -656,9 +901,7 @@ def home():
 
     borrow_stats = cursor.fetchall()
 
-    # -----------------------------
-    # Top Borrowed Books
-    # -----------------------------
+
 
     cursor.execute(
         """
@@ -680,9 +923,7 @@ def home():
 
     top_books = cursor.fetchall()
 
-    # -----------------------------
-    # Recent Activities
-    # -----------------------------
+   
 
     cursor.execute(
         """
@@ -713,9 +954,7 @@ def home():
         top_books=top_books,
     )
 
-# =========================================================
-# Book Routes
-# =========================================================
+
 
 @app.route("/add")
 @login_required
@@ -741,7 +980,7 @@ def save():
     db.commit()
 
     log_activity(f"Added Book: {title}")
-    flash("✅ Book added successfully!", "success")
+    flash("Book added successfully!", "success")
     return redirect("/dashboard")
 
 
@@ -772,24 +1011,35 @@ def update_book(id):
     db.commit()
 
     log_activity(f"Edited Book: {title}")
-    flash("✏️ Book updated successfully!", "warning")
+    flash("Book updated successfully!", "warning")
     return redirect("/dashboard")
 
 
 @app.route("/delete/<int:id>")
 @login_required
 def delete_book(id):
+    cursor.execute(
+        "SELECT COUNT(*) FROM borrow_history WHERE book_id=%s AND status='Borrowed'",
+        (id,),
+    )
+    active_borrows = cursor.fetchone()[0]
+
+    if active_borrows > 0:
+        flash(
+            "This book can't be deleted while a copy is still borrowed - "
+            "please wait until it's returned first.",
+            "danger",
+        )
+        return redirect("/dashboard")
+
     cursor.execute("DELETE FROM books WHERE id=%s", (id,))
     db.commit()
 
     log_activity(f"Deleted Book: {id}")
-    flash("🗑️ Book deleted successfully!", "danger")
+    flash("Book deleted successfully!", "danger")
     return redirect("/dashboard")
 
 
-# =========================================================
-# Borrow / Return Routes
-# =========================================================
 
 @app.route("/borrow/<int:id>")
 @login_required
@@ -800,7 +1050,9 @@ def borrow(id):
     cursor.execute("SELECT * FROM members")
     members = cursor.fetchall()
 
-    return render_template("borrow_book.html", book=book, members=members)
+    today = get_library_date()
+
+    return render_template("borrow_book.html", book=book, members=members, today=today)
 
 
 @app.route("/borrow_book/<int:id>", methods=["POST"])
@@ -812,19 +1064,36 @@ def borrow_book(id):
     book = cursor.fetchone()
 
     if not book:
-        flash("❌ Book not found!", "danger")
+        flash("Book not found!", "danger")
         return redirect("/dashboard")
 
     book_title, quantity = book
 
     if quantity <= 0:
-        flash("❌ Book is currently unavailable!", "danger")
+        flash("Book is currently unavailable!", "danger")
         return redirect("/dashboard")
+
+    today = get_library_date()
+
+   
+    borrow_date_raw = request.form.get("borrow_date", "").strip()
+
+    if borrow_date_raw:
+        try:
+            borrow_date = datetime.strptime(borrow_date_raw, "%Y-%m-%d").date()
+        except ValueError:
+            flash("Invalid borrow date format. Using today's date instead.", "warning")
+            borrow_date = today
+    else:
+        borrow_date = today
+
+    if borrow_date > today:
+        flash("Borrow date cannot be in the future. Using today's date instead.", "warning")
+        borrow_date = today
 
     cursor.execute("UPDATE books SET quantity = quantity - 1 WHERE id=%s", (id,))
 
-    borrow_date = get_library_date()
-    due_date = borrow_date + timedelta(days=14)
+    due_date = borrow_date + timedelta(days=DEFAULT_LOAN_DAYS)
 
     cursor.execute(
         """
@@ -837,7 +1106,7 @@ def borrow_book(id):
     db.commit()
 
     log_activity(f"Borrowed Book: {book_title}")
-    flash("📚 Book borrowed successfully!", "success")
+    flash("Book borrowed successfully!", "success")
     return redirect("/dashboard")
 
 
@@ -857,7 +1126,7 @@ def return_book(id):
     record = cursor.fetchone()
 
     if not record:
-        flash("❌ Borrow record not found!", "danger")
+        flash("Borrow record not found!", "danger")
         return redirect("/borrow_history")
 
     today = get_library_date()
@@ -887,7 +1156,7 @@ def confirm_return(id):
     record = cursor.fetchone()
 
     if not record:
-        flash("❌ Borrow record not found!", "danger")
+        flash("Borrow record not found!", "danger")
         return redirect("/borrow_history")
 
     book_id, due_date = record
@@ -919,12 +1188,24 @@ def confirm_return(id):
 )
     db.commit()
 
-    flash(f"📖 Book returned successfully! Fine Collected: ₹{fine}", "success")
+    flash(f"Book returned successfully! Fine Collected: ₹{fine}", "success")
     return redirect("/borrow_history")
 
 @app.route("/receive_payment/<int:id>")
 @login_required
 def receive_payment(id):
+
+    cursor.execute(
+        """
+        SELECT b.title, m.full_name, bh.fine
+        FROM borrow_history bh
+        JOIN books b ON bh.book_id = b.id
+        JOIN members m ON bh.member_id = m.id
+        WHERE bh.id=%s
+        """,
+        (id,),
+    )
+    record = cursor.fetchone()
 
     cursor.execute(
         """
@@ -937,16 +1218,19 @@ def receive_payment(id):
 
     db.commit()
 
-    log_activity(f"Fine Payment Received (Borrow ID: {id})")
+    if record:
+        book_title, member_name, fine_amount = record
+        log_activity(
+            f"Fine Payment Received: {member_name} - '{book_title}' (Rs.{fine_amount})"
+        )
+    else:
+        log_activity(f"Fine Payment Received (Borrow ID: {id})")
 
-    flash("✅ Fine payment received successfully!", "success")
+    flash("Fine payment received successfully!", "success")
 
     return redirect("/borrow_history")
 
 
-# =========================================================
-# Member Routes
-# =========================================================
 
 @app.route("/members")
 @login_required
@@ -980,7 +1264,7 @@ def save_member():
 
     if cursor.fetchone():
 
-        flash("❌ Username already exists!", "danger")
+        flash("Username already exists!", "danger")
         return redirect("/add_member")
 
     hashed_password = generate_password_hash(password)
@@ -1001,7 +1285,7 @@ def save_member():
 
     log_activity(f"Added Member: {full_name}")
 
-    flash("👤 Member added successfully!", "success")
+    flash("Member added successfully!", "success")
 
     return redirect("/members")
 
@@ -1017,7 +1301,7 @@ def edit_member(id):
     member = cursor.fetchone()
 
     if not member:
-        flash("❌ Member not found!", "danger")
+        flash("Member not found!", "danger")
         return redirect("/members")
 
     return render_template(
@@ -1047,7 +1331,7 @@ def update_member(id):
 
     if cursor.fetchone():
 
-        flash("❌ Username already exists!", "danger")
+        flash("Username already exists!", "danger")
         return redirect(f"/edit_member/{id}")
 
     cursor.execute(
@@ -1073,18 +1357,32 @@ def update_member(id):
 
     log_activity(f"Edited Member: {full_name}")
 
-    flash("✅ Member updated successfully!", "success")
+    flash("Member updated successfully!", "success")
 
     return redirect("/members")
 
 @app.route("/delete_member/<int:id>")
 @login_required
 def delete_member(id):
+    cursor.execute(
+        "SELECT COUNT(*) FROM borrow_history WHERE member_id=%s AND status='Borrowed'",
+        (id,),
+    )
+    active_borrows = cursor.fetchone()[0]
+
+    if active_borrows > 0:
+        flash(
+            "This member can't be deleted while they still have a book "
+            "borrowed - please have them return it first.",
+            "danger",
+        )
+        return redirect("/members")
+
     cursor.execute("DELETE FROM members WHERE id=%s", (id,))
     db.commit()
 
     log_activity(f"Deleted Member: {id}")
-    flash("🗑️ Member deleted successfully!", "danger")
+    flash("Member deleted successfully!", "danger")
     return redirect("/members")
 
 @app.route("/reset_member_password/<int:id>", methods=["GET", "POST"])
@@ -1101,7 +1399,7 @@ def reset_member_password(id):
     member = cursor.fetchone()
 
     if not member:
-        flash("❌ Member not found!", "danger")
+        flash("Member not found!", "danger")
         return redirect("/members")
 
     if request.method == "POST":
@@ -1111,7 +1409,7 @@ def reset_member_password(id):
 
         if password != confirm:
 
-            flash("❌ Passwords do not match!", "danger")
+            flash("Passwords do not match!", "danger")
             return redirect(f"/reset_member_password/{id}")
 
         hashed = generate_password_hash(password)
@@ -1132,7 +1430,7 @@ def reset_member_password(id):
         )
 
         flash(
-            "✅ Student password updated successfully!",
+            "Student password updated successfully!",
             "success"
         )
 
@@ -1144,9 +1442,6 @@ def reset_member_password(id):
     )
 
 
-# =========================================================
-# Borrow History
-# =========================================================
 
 @app.route("/borrow_history")
 @login_required
@@ -1221,9 +1516,6 @@ def borrow_history():
     )
 
 
-# =========================================================
-# Library Date Controls
-# =========================================================
 
 @app.route("/update_library_date", methods=["POST"])
 @login_required
@@ -1240,7 +1532,7 @@ def update_library_date():
     )
     db.commit()
 
-    flash(f"📅 Library date advanced by {days} day(s).", "success")
+    flash(f"Library date advanced by {days} day(s).", "success")
     return redirect("/dashboard")
 
 
@@ -1250,13 +1542,10 @@ def reset_library_date():
     cursor.execute("UPDATE system_settings SET library_date = CURDATE() WHERE id=1")
     db.commit()
 
-    flash("📅 Library date reset to today's date.", "warning")
+    flash("Library date reset to today's date.", "warning")
     return redirect("/dashboard")
 
 
-# =========================================================
-# Admin Management
-# =========================================================
 
 @app.route("/admins")
 @login_required
@@ -1289,7 +1578,7 @@ def save_admin():
 
     cursor.execute("SELECT id FROM admins WHERE username=%s", (username,))
     if cursor.fetchone():
-        flash("❌ Username already exists!", "danger")
+        flash("Username already exists!", "danger")
         return redirect("/add_admin")
 
     cursor.execute(
@@ -1302,7 +1591,7 @@ def save_admin():
     db.commit()
 
     log_activity(f"Added Admin: {full_name}")
-    flash("✅ New admin created successfully!", "success")
+    flash("New admin created successfully!", "success")
     return redirect("/admins")
 
 
@@ -1332,7 +1621,7 @@ def update_admin(id):
     db.commit()
 
     log_activity(f"Edited Admin: {full_name}")
-    flash("✅ Admin updated successfully!", "success")
+    flash("Admin updated successfully!", "success")
     return redirect("/admins")
 
 
@@ -1343,13 +1632,13 @@ def delete_admin(id):
     admin = cursor.fetchone()
 
     if not admin:
-        flash("❌ Admin not found!", "danger")
+        flash("Admin not found!", "danger")
         return redirect("/admins")
 
     username, role = admin
 
     if username == session["admin"]:
-        flash("❌ You cannot delete your own account!", "danger")
+        flash("You cannot delete your own account!", "danger")
         return redirect("/admins")
 
     if role == "Head Librarian":
@@ -1357,20 +1646,17 @@ def delete_admin(id):
         total_heads = cursor.fetchone()[0]
 
         if total_heads <= 1:
-            flash("❌ At least one Head Librarian must remain!", "danger")
+            flash("At least one Head Librarian must remain!", "danger")
             return redirect("/admins")
 
     cursor.execute("DELETE FROM admins WHERE id=%s", (id,))
     db.commit()
 
     log_activity(f"Deleted Admin: {username}")
-    flash("🗑️ Admin deleted successfully!", "success")
+    flash("Admin deleted successfully!", "success")
     return redirect("/admins")
 
 
-# =========================================================
-# Activity Logs
-# =========================================================
 
 @app.route("/activity_logs")
 @role_required("Head Librarian")
@@ -1401,9 +1687,6 @@ def activity_logs():
     return render_template("activity_logs.html", logs=logs)
 
 
-# =========================================================
-# Reports
-# =========================================================
 
 @app.route("/reports")
 @role_required("Head Librarian", "Librarian")
@@ -1417,7 +1700,14 @@ def reports():
     cursor.execute("SELECT COUNT(*) FROM members")
     total_members = cursor.fetchone()[0]
 
-    cursor.execute("SELECT COUNT(*) FROM borrow_history WHERE status='Borrowed'")
+    cursor.execute(
+        """
+        SELECT COUNT(*) FROM borrow_history bh
+        JOIN books b ON bh.book_id = b.id
+        JOIN members m ON bh.member_id = m.id
+        WHERE bh.status='Borrowed'
+        """
+    )
     borrowed_books = cursor.fetchone()[0]
 
     cursor.execute("SELECT COUNT(*) FROM borrow_history WHERE status='Returned'")
@@ -1428,9 +1718,12 @@ def reports():
 
     cursor.execute(
         """
-        SELECT COUNT(*) FROM borrow_history
-        WHERE status='Borrowed' AND due_date < CURDATE()
-        """
+        SELECT COUNT(*) FROM borrow_history bh
+        JOIN books b ON bh.book_id = b.id
+        JOIN members m ON bh.member_id = m.id
+        WHERE bh.status='Borrowed' AND bh.due_date < %s
+        """,
+        (get_library_date(),),
     )
     overdue_books = cursor.fetchone()[0]
 
@@ -1443,7 +1736,35 @@ def reports():
         returned_books=returned_books,
         overdue_books=overdue_books,
         total_fines=total_fines,
+        email_enabled=EMAIL_NOTIFICATIONS_ENABLED,
     )
+
+
+@app.route("/send_due_reminders", methods=["POST"])
+@role_required("Head Librarian", "Librarian")
+def send_due_reminders():
+    if not EMAIL_NOTIFICATIONS_ENABLED:
+        flash(
+            "Email isn't configured yet (set SMTP_HOST / SMTP_FROM_EMAIL "
+            "and related environment variables) - no emails were sent.",
+            "warning",
+        )
+        return redirect("/reports")
+
+    try:
+        sent_count = send_due_date_reminder_emails()
+    except Exception as e:
+        flash(f"Something went wrong while sending reminder emails: {e}", "danger")
+        return redirect("/reports")
+
+    log_activity(f"Sent {sent_count} due-date reminder email(s)")
+
+    if sent_count:
+        flash(f"Sent {sent_count} due-date reminder email(s) to students.", "success")
+    else:
+        flash("No students needed a reminder right now.", "info")
+
+    return redirect("/reports")
 
 @app.route("/export/books")
 @login_required
@@ -1608,9 +1929,18 @@ def export_complete():
         mimetype="application/pdf",
     )
 
-# =========================================================
-# Entry Point
-# =========================================================
+
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template("404.html"), 404
+
+
+@app.errorhandler(500)
+def internal_server_error(e):
+    return render_template("500.html"), 500
+
+
+
 
 if __name__ == "__main__":
     app.run(
