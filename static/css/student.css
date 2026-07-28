@@ -1,27 +1,36 @@
+/* Student portal — extends style.css tokens. Load style.css first. */
+
 .student-body{
-
-    background:#eef5ff;
-
+    background:var(--paper-50, #F6F6FB);
     min-height:100vh;
-
 }
 
-.card{
-
-    border-radius:20px;
-
+.student-body .card{
+    border-radius:14px;
+    transition:.25s;
 }
 
-.card:hover{
-
+.student-body .card:hover{
     transform:translateY(-3px);
-
-    transition:.3s;
-
+    box-shadow:0 14px 26px rgba(14,19,56,.10);
 }
 
-.btn{
+.student-body .btn{
+    border-radius:8px;
+}
 
-    border-radius:12px;
+.student-stat{
+    text-align:center;
+    padding:8px 0;
+}
 
+.student-stat .stat-glyph{
+    font-size:1.6rem;
+    color:var(--brass-600, #F0A202);
+    margin-bottom:6px;
+}
+
+.student-stat h2{
+    font-family:var(--font-mono, monospace);
+    color:var(--ink-800, #202868);
 }
