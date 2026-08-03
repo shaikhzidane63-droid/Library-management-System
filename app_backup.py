@@ -28,7 +28,7 @@ def require_role(allowed_roles):
         return redirect("/login")
 
     if session.get("role") not in allowed_roles:
-        flash("⛔ Access Denied!", "danger")
+        flash("Access Denied!", "danger")
         return redirect("/")
 
     return None
@@ -83,7 +83,7 @@ def login():
                     session["admin"] = admin[2]
                     session["role"] = admin[4]
 
-                    flash("✅ Login Successful!", "success")
+                    flash("Login Successful!", "success")
 
                     return redirect("/")
 
@@ -95,11 +95,11 @@ def login():
                     session["admin"] = admin[2]
                     session["role"] = admin[4]
 
-                    flash("✅ Login Successful!", "success")
+                    flash("Login Successful!", "success")
 
                     return redirect("/")
 
-        flash("❌ Invalid Username or Password!", "danger")
+        flash("Invalid Username or Password!", "danger")
 
     return render_template("login.html")
 
@@ -336,7 +336,7 @@ def save():
 
     log_activity(f"Added Book: {title}")
 
-    flash("✅ Book added successfully!", "success")
+    flash("Book added successfully!", "success")
 
     return redirect("/")
 
@@ -376,7 +376,7 @@ def update_book(id):
 
     log_activity(f"Edited Book: {title}")
 
-    flash("✏️ Book updated successfully!", "warning")
+    flash("Book updated successfully!", "warning")
 
     return redirect("/")
 
@@ -392,7 +392,7 @@ def delete_book(id):
 
     log_activity(f"Deleted Book: {id}")
 
-    flash("🗑️ Book deleted successfully!", "danger")
+    flash("Book deleted successfully!", "danger")
 
     return redirect("/")
 
@@ -433,7 +433,7 @@ def borrow_book(id):
 
     # Check availability
     if quantity <= 0:
-        flash("❌ Book is currently unavailable!", "danger")
+        flash("Book is currently unavailable!", "danger")
         return redirect("/")
 
     # Reduce quantity
@@ -463,7 +463,7 @@ def borrow_book(id):
     # Log activity
     log_activity(f"Borrowed Book: {book_title}")
 
-    flash("📚 Book borrowed successfully!", "success")
+    flash("Book borrowed successfully!", "success")
 
     return redirect("/")
 # -------------------------
@@ -559,7 +559,7 @@ def confirm_return(id):
 
     db.commit()
 
-    flash(f"📖 Book returned successfully! Fine Collected: ₹{fine}", "success")
+    flash(f"Book returned successfully! Fine Collected: ₹{fine}", "success")
 
     return redirect("/borrow_history")
 
@@ -610,7 +610,7 @@ def save_member():
 
     log_activity(f"Added Member: {full_name}")
 
-    flash("👤 Member added successfully!", "success")
+    flash("Member added successfully!", "success")
 
     return redirect("/members")
 
@@ -648,7 +648,7 @@ def update_member(id):
 
     log_activity(f"Edited Member: {full_name}")
 
-    flash("✏️ Member updated successfully!", "warning")
+    flash("Member updated successfully!", "warning")
 
     return redirect("/members")
 
@@ -666,7 +666,7 @@ def delete_member(id):
 
     log_activity(f"Deleted Member: {id}")
 
-    flash("🗑️ Member deleted successfully!", "danger")
+    flash("Member deleted successfully!", "danger")
 
     return redirect("/members")
 # -------------------------
@@ -758,7 +758,7 @@ def update_library_date():
 
     db.commit()
 
-    flash(f"📅 Library date advanced by {days} day(s).", "success")
+    flash(f"Library date advanced by {days} day(s).", "success")
 
     return redirect("/")
 
@@ -781,7 +781,7 @@ def reset_library_date():
 
     db.commit()
 
-    flash("📅 Library date reset to today's date.", "warning")
+    flash("Library date reset to today's date.", "warning")
 
     return redirect("/")
 
@@ -849,7 +849,7 @@ def save_admin():
 
     if cursor.fetchone():
 
-        flash("❌ Username already exists!", "danger")
+        flash("Username already exists!", "danger")
 
         return redirect("/add_admin")
 
@@ -868,7 +868,7 @@ def save_admin():
 
     log_activity(f"Added Admin: {full_name}")
 
-    flash("✅ New admin created successfully!", "success")
+    flash("New admin created successfully!", "success")
 
     return redirect("/admins")
 
@@ -928,7 +928,7 @@ def update_admin(id):
     log_activity(f"Edited Admin: {full_name}")
 
     flash(
-        "✅ Admin updated successfully!",
+        "Admin updated successfully!",
         "success"
     )
 
@@ -957,7 +957,7 @@ def delete_admin(id):
 
     if not admin:
 
-        flash("❌ Admin not found!", "danger")
+        flash("Admin not found!", "danger")
 
         return redirect("/admins")
 
@@ -967,7 +967,7 @@ def delete_admin(id):
     # Prevent deleting yourself
     if username == session["admin"]:
 
-        flash("❌ You cannot delete your own account!", "danger")
+        flash("You cannot delete your own account!", "danger")
 
         return redirect("/admins")
 
@@ -985,7 +985,7 @@ def delete_admin(id):
         if total_heads <= 1:
 
             flash(
-                "❌ At least one Head Librarian must remain!",
+                "At least one Head Librarian must remain!",
                 "danger"
             )
 
@@ -1002,7 +1002,7 @@ def delete_admin(id):
     log_activity(f"Deleted Admin: {username}")
 
     flash(
-        "🗑️ Admin deleted successfully!",
+        "Admin deleted successfully!",
         "success"
     )
 
@@ -1037,7 +1037,7 @@ def require_role(allowed_roles):
         return redirect("/login")
 
     if session.get("role") not in allowed_roles:
-        flash("⛔ Access Denied!", "danger")
+        flash("Access Denied!", "danger")
         return redirect("/")
 
     return None
@@ -1092,7 +1092,7 @@ def login():
                     session["admin"] = admin[2]
                     session["role"] = admin[4]
 
-                    flash("✅ Login Successful!", "success")
+                    flash("Login Successful!", "success")
 
                     return redirect("/")
 
@@ -1104,11 +1104,11 @@ def login():
                     session["admin"] = admin[2]
                     session["role"] = admin[4]
 
-                    flash("✅ Login Successful!", "success")
+                    flash("Login Successful!", "success")
 
                     return redirect("/")
 
-        flash("❌ Invalid Username or Password!", "danger")
+        flash("Invalid Username or Password!", "danger")
 
     return render_template("login.html")
 
@@ -1296,7 +1296,7 @@ def save():
 
     log_activity(f"Added Book: {title}")
 
-    flash("✅ Book added successfully!", "success")
+    flash("Book added successfully!", "success")
 
     return redirect("/")
 
@@ -1336,7 +1336,7 @@ def update_book(id):
     
     log_activity(f"Edited Book: {title}")
 
-    flash("✏️ Book updated successfully!", "warning")
+    flash("Book updated successfully!", "warning")
 
     return redirect("/")
 
@@ -1352,7 +1352,7 @@ def delete_book(id):
 
     log_activity(f"Deleted Book: {id}")
 
-    flash("🗑️ Book deleted successfully!", "danger")
+    flash("Book deleted successfully!", "danger")
 
     return redirect("/")
 
@@ -1468,7 +1468,7 @@ def confirm_return(id):
 
     db.commit()
 
-    flash(f"📖 Book returned successfully! Fine Collected: ₹{fine}", "success")
+    flash(f"Book returned successfully! Fine Collected: ₹{fine}", "success")
 
     return redirect("/borrow_history")
 
@@ -1517,7 +1517,7 @@ def save_member():
 
     db.commit()
 
-    flash("👤 Member added successfully!", "success")
+    flash("Member added successfully!", "success")
 
     return redirect("/members")
 
@@ -1553,7 +1553,7 @@ def update_member(id):
 
     db.commit()
 
-    flash("✏️ Member updated successfully!", "warning")
+    flash("Member updated successfully!", "warning")
 
     return redirect("/members")
 
@@ -1569,7 +1569,7 @@ def delete_member(id):
 
     db.commit()
 
-    flash("🗑️ Member deleted successfully!", "danger")
+    flash("Member deleted successfully!", "danger")
 
     return redirect("/members")
 # -------------------------
@@ -1661,7 +1661,7 @@ def update_library_date():
 
     db.commit()
 
-    flash(f"📅 Library date advanced by {days} day(s).", "success")
+    flash(f"Library date advanced by {days} day(s).", "success")
 
     return redirect("/")
 
@@ -1684,7 +1684,7 @@ def reset_library_date():
 
     db.commit()
 
-    flash("📅 Library date reset to today's date.", "warning")
+    flash("Library date reset to today's date.", "warning")
 
     return redirect("/")
 
@@ -1752,7 +1752,7 @@ def save_admin():
 
     if cursor.fetchone():
 
-        flash("❌ Username already exists!", "danger")
+        flash("Username already exists!", "danger")
 
         return redirect("/add_admin")
 
@@ -1769,7 +1769,7 @@ def save_admin():
 
     db.commit()
 
-    flash("✅ New admin created successfully!", "success")
+    flash("New admin created successfully!", "success")
 
     return redirect("/admins")
 
@@ -1827,7 +1827,7 @@ def update_admin(id):
     db.commit()
 
     flash(
-        "✅ Admin updated successfully!",
+        "Admin updated successfully!",
         "success"
     )
 
@@ -1856,7 +1856,7 @@ def delete_admin(id):
 
     if not admin:
 
-        flash("❌ Admin not found!", "danger")
+        flash("Admin not found!", "danger")
 
         return redirect("/admins")
 
@@ -1866,7 +1866,7 @@ def delete_admin(id):
     # Prevent deleting yourself
     if username == session["admin"]:
 
-        flash("❌ You cannot delete your own account!", "danger")
+        flash("You cannot delete your own account!", "danger")
 
         return redirect("/admins")
 
@@ -1884,7 +1884,7 @@ def delete_admin(id):
         if total_heads <= 1:
 
             flash(
-                "❌ At least one Head Librarian must remain!",
+                "At least one Head Librarian must remain!",
                 "danger"
             )
 
@@ -1899,7 +1899,7 @@ def delete_admin(id):
     db.commit()
 
     flash(
-        "🗑️ Admin deleted successfully!",
+        "Admin deleted successfully!",
         "success"
     )
 

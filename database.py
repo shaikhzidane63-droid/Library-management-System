@@ -8,7 +8,7 @@ try:
         database="library_management_system"
     )
 
-    print("✅ Connected to MySQL successfully!")
+    print("Connected to MySQL successfully!")
 
 except Exception as e:
-    print("❌ Error:", e)
+    print("Error:", e)

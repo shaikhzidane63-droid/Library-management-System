@@ -4,22 +4,15 @@
 <head>
 
     <meta charset="UTF-8">
-
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
-
     <link rel="icon" href="{{ url_for('static', filename='images/college_logo.png') }}">
 
-<title>College Library Management Portal</title>
+<title>Edit Member</title>
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-          rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
-          rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 
-    <link rel="stylesheet"
-      href="{{ url_for('static', filename='css/style.css') }}">      
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 
 </head>
 
@@ -27,171 +20,84 @@
 
 {% include "_admin_nav.html" %}
 
-<div id="mainContent" class="container mt-4">
 
-    <!-- ================================= -->
-    <!-- PROJECT HEADER -->
-    <!-- ================================= -->
+<div id="mainContent" class="container mt-5">
 
-    <div class="text-center mb-4">
+    <div class="card shadow">
 
-        <h1 class="display-4 fw-bold text-primary">
-
-            <i class="bi bi-journal-bookmark-fill"></i>
-            College Library Management Portal
-
-        </h1>
-
-        <p class="lead text-muted">
-
-            Professional Smart Library System
-
-        </p>
-
-    </div>
-
-<!-- ================================= -->
-<!-- PREMIUM HERO BANNER -->
-<!-- ================================= -->
-
-<div class="premium-hero mb-5">
-
-    <div class="row align-items-center">
-
-        <!-- Left Side -->
-
-        <div class="col-lg-8">
-
-            <span class="hero-badge">
-
-                <i class="bi bi-stars"></i>
-                Smart Library Dashboard
-
-            </span>
-
-            <h1 class="hero-title mt-4">
-
-                Welcome back,
-
-                <span class="hero-name">
-
-                    {{ session["admin"] }}
-
-                </span>
-
-            </h1>
-
-            <p class="hero-role">
-
-                {{ session["role"] }}
-
-            </p>
-
-            <p class="hero-description">
-
-                Manage books, members, borrowing, reports,
-                analytics and activity logs from one intelligent dashboard.
-
-            </p>
-
+        <div class="card-header bg-warning text-dark">
+            <h3><i class="bi bi-pencil-fill"></i> Edit Member</h3>
         </div>
-
-        <!-- Right Side -->
-
-        <div class="col-lg-4 text-lg-end mt-4 mt-lg-0">
-
-            <div class="hero-clock">
-
-                <div class="clock-title">
-
-                    Current Time
-
-                </div>
-
-                <h2 id="currentTime"></h2>
-
-                <div id="currentDate"></div>
-
-            </div>
-
-        </div>
-
-    </div>
-
-</div>
-    <!-- ================================= -->
-<!-- DASHBOARD CARDS -->
-<!-- ================================= -->
-
-{% include "dashboard_cards.html" %}
-    <!-- ========================= -->
-    <!-- LIBRARY DATE -->
-    <!-- ========================= -->
-
-    {% if session["role"] == "Head Librarian" %}
-
-    <div class="card shadow mb-4">
 
         <div class="card-body">
 
-            <h4 class="text-primary">
+            <form action="/update_member/{{ member[0] }}" method="POST">
 
-                <i class="bi bi-calendar3"></i>
-                Library Date Simulator
-
-            </h4>
-
-            <p>
-
-                Current Library Date :
-
-                <strong class="text-success">
-
-                    {{ library_date }}
-
-                </strong>
-
-            </p>
-
-            <form
-                action="/update_library_date"
-                method="POST"
-                class="row g-3">
-
-                <div class="col-md-3">
+                <div class="mb-3">
+                    <label class="form-label">Full Name</label>
 
                     <input
-                        type="number"
-                        name="days"
+                        type="text"
+                        name="name"
                         class="form-control"
-                        placeholder="Advance Days"
-                        min="1"
+                        value="{{ member[1] }}"
                         required>
-
                 </div>
 
-                <div class="col-auto">
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
 
-                    <button
-                        class="btn btn-primary">
-
-                        Advance Date
-
-                    </button>
-
+                    <input
+                        type="email"
+                        name="email"
+                        class="form-control"
+                        value="{{ member[2] }}"
+                        required>
                 </div>
 
-                <div class="col-auto">
+                <div class="mb-3">
+                    <label class="form-label">Phone</label>
 
-                    <a
-                        href="/reset_library_date"
-                        class="btn btn-warning">
-
-                        Reset
-
-                    </a>
-
+                    <input
+                        type="text"
+                        name="phone"
+                        class="form-control"
+                        value="{{ member[3] }}"
+                        required>
                 </div>
+
+                <hr>
+
+                <h5 class="text-primary mb-3">
+                    <i class="bi bi-shield-lock-fill"></i> Student Login
+                </h5>
+
+                <div class="mb-4">
+                    <label class="form-label">Username</label>
+
+                    <input
+                        type="text"
+                        name="username"
+                        class="form-control"
+                        value="{{ member[4] or '' }}"
+                        required>
+                </div>
+
+                <button
+                    type="submit"
+                    class="btn btn-warning">
+
+                    <i class="bi bi-pencil-fill"></i> Update Member
+
+                </button>
+
+                <a
+                    href="/members"
+                    class="btn btn-secondary">
+
+                    Cancel
+
+                </a>
 
             </form>
 
@@ -199,705 +105,12 @@
 
     </div>
 
-    {% endif %}
-
-      <!-- ========================= -->
-    <!-- FLASH MESSAGES -->
-    <!-- ========================= -->
-
-    {% with messages = get_flashed_messages(with_categories=true) %}
-
-        {% if messages %}
-
-            {% for category, message in messages %}
-
-                <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm">
-
-                    {{ message }}
-
-                    <button
-                        type="button"
-                        class="btn-close"
-                        data-bs-dismiss="alert">
-                    </button>
-
-                </div>
-
-            {% endfor %}
-
-        {% endif %}
-
-    {% endwith %}
-
-    <!-- ================================= -->
-<!-- QUICK ACTIONS -->
-<!-- ================================= -->
-
-<div class="card shadow-sm border-0 mb-4">
-
-    <div class="card-body">
-
-        <h4 class="fw-bold text-primary mb-4">
-
-            <i class="bi bi-lightning-charge-fill"></i>
-            Quick Actions
-
-        </h4>
-
-        <div class="row g-3">
-
-            {% if session["role"] in ["Head Librarian","Librarian"] %}
-
-            <div class="col-lg-2 col-md-4">
-
-                <a href="/add"
-                   class="text-decoration-none">
-
-                    <div class="card dashboard-card quick-action-card text-center">
-                
-
-                        <div class="card-body">
-
-                            <div class="display-5">
-
-                                <i class="bi bi-journal-plus"></i>
-
-                            </div>
-
-                            <h6 class="mt-3">
-
-                                Add Book
-
-                            </h6>
-
-                        </div>
-
-                    </div>
-
-                </a>
-
-            </div>
-
-            {% endif %}
-
-            {% if session["role"] in ["Head Librarian","Librarian"] %}
-
-            <div class="col-lg-2 col-md-4">
-
-                <a href="/members"
-                   class="text-decoration-none">
-
-                    <div class="card dashboard-card quick-action-card text-center">
-
-                        <div class="card-body">
-
-                            <div class="display-5">
-
-                                <i class="bi bi-people-fill"></i>
-
-                            </div>
-
-                            <h6 class="mt-3">
-
-                                Members
-
-                            </h6>
-
-                        </div>
-
-                    </div>
-
-                </a>
-
-            </div>
-
-            {% endif %}
-
-            <div class="col-lg-2 col-md-4">
-
-                <a href="/borrow_history"
-                   class="text-decoration-none">
-
-                    <div class="card dashboard-card quick-action-card text-center">
-
-                        <div class="card-body">
-
-                            <div class="display-5">
-
-                                <i class="bi bi-clock-history"></i>
-
-                            </div>
-
-                            <h6 class="mt-3">
-
-                                Borrow History
-
-                            </h6>
-
-                        </div>
-
-                    </div>
-
-                </a>
-
-            </div>
-
-            {% if session["role"] in ["Head Librarian","Librarian"] %}
-
-            <div class="col-lg-2 col-md-4">
-
-                <a href="/reports"
-                   class="text-decoration-none">
-
-                    <div class="card dashboard-card quick-action-card text-center">
-
-                        <div class="card-body">
-
-                            <div class="display-5">
-
-                                <i class="bi bi-bar-chart-fill"></i>
-
-                            </div>
-
-                            <h6 class="mt-3">
-
-                                Reports
-
-                            </h6>
-
-                        </div>
-
-                    </div>
-
-                </a>
-
-            </div>
-
-            {% endif %}
-
-            {% if session["role"]=="Head Librarian" %}
-
-            <div class="col-lg-2 col-md-4">
-
-                <a href="/admins"
-                   class="text-decoration-none">
-
-                    <div class="card dashboard-card quick-action-card text-center">
-
-                        <div class="card-body">
-
-                            <div class="display-5">
-
-                                <i class="bi bi-person-badge-fill"></i>
-
-                            </div>
-
-                            <h6 class="mt-3">
-
-                                Admins
-
-                            </h6>
-
-                        </div>
-
-                    </div>
-
-                </a>
-
-            </div>
-
-            <div class="col-lg-2 col-md-4">
-
-                <a href="/activity_logs"
-                   class="text-decoration-none">
-
-                    <div class="card dashboard-card quick-action-card text-center">
-
-                        <div class="card-body">
-
-                            <div class="display-5">
-
-                                <i class="bi bi-clipboard-data-fill"></i>
-
-                            </div>
-
-                            <h6 class="mt-3">
-
-                                Activity Logs
-
-                            </h6>
-
-                        </div>
-
-                    </div>
-
-                </a>
-
-            </div>
-
-            {% endif %}
-
-            <div class="col-lg-2 col-md-4">
-
-                <a href="/logout"
-                   class="text-decoration-none">
-
-                    <div class="card dashboard-card quick-action-card border-danger text-center h-100">
-
-                        <div class="card-body">
-
-                            <div class="display-5">
-
-                                <i class="bi bi-box-arrow-right"></i>
-
-                            </div>
-
-                            <h6 class="mt-3 text-danger">
-
-                                Logout
-
-                            </h6>
-
-                        </div>
-
-                    </div>
-
-                </a>
-
-            </div>
-
-        </div>
-
-    </div>
-
 </div>
-
-<!-- ================================= -->
-<!-- DASHBOARD OVERVIEW -->
-<!-- ================================= -->
-
-<div class="card shadow-sm border-0 mb-4">
-
-    <div class="card-body">
-
-        <h4 class="fw-bold text-primary mb-4">
-
-            <i class="bi bi-graph-up"></i>
-            Today's Overview
-
-        </h4>
-
-        <div class="row text-center">
-
-            <div class="col-md-3 mb-3">
-
-                <div class="border rounded p-3 h-100">
-
-                    <div class="display-5 text-primary"><i class="bi bi-book-half"></i></div>
-
-                    <h2 class="fw-bold text-primary">
-
-                        {{ total_books }}
-
-                    </h2>
-
-                    <p class="mb-0">
-
-                        Books Available
-
-                    </p>
-
-                </div>
-
-            </div>
-
-            <div class="col-md-3 mb-3">
-
-                <div class="border rounded p-3 h-100">
-
-                    <div class="display-5 text-success"><i class="bi bi-people-fill"></i></div>
-
-                    <h2 class="fw-bold text-success">
-
-                        {{ total_members }}
-
-                    </h2>
-
-                    <p class="mb-0">
-
-                        Registered Members
-
-                    </p>
-
-                </div>
-
-            </div>
-
-            <div class="col-md-3 mb-3">
-
-                <div class="border rounded p-3 h-100">
-
-                    <div class="display-5 text-warning"><i class="bi bi-journal-arrow-up"></i></div>
-
-                    <h2 class="fw-bold text-warning">
-
-                        {{ borrowed_books }}
-
-                    </h2>
-
-                    <p class="mb-0">
-
-                        Borrowed Books
-
-                    </p>
-
-                </div>
-
-            </div>
-
-            <div class="col-md-3 mb-3">
-
-                <div class="border rounded p-3 h-100">
-
-                    <div class="display-5 text-danger"><i class="bi bi-exclamation-triangle-fill"></i></div>
-
-                    <h2 class="fw-bold text-danger">
-
-                        {{ overdue_books }}
-
-                    </h2>
-
-                    <p class="mb-0">
-
-                        Overdue Books
-
-                    </p>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    </div>
-
-</div>
-
-<!-- ================================= -->
-<!-- RECENT ACTIVITY -->
-<!-- ================================= -->
-
-<div class="card shadow-sm border-0 mb-4">
-
-    <div class="card-body">
-
-        <h4 class="fw-bold text-primary mb-4">
-
-            <i class="bi bi-activity"></i>
-            Recent Activity
-
-        </h4>
-
-        {% if recent_activities %}
-
-            <div class="list-group">
-
-                {% for activity in recent_activities %}
-
-                    <div class="list-group-item d-flex justify-content-between align-items-center">
-
-                        <div>
-
-                            <strong>
-
-                                {{ activity[0] }}
-
-                            </strong>
-
-                        </div>
-
-                        <small class="text-muted">
-
-                            {{ activity[1].strftime('%d %b %Y %I:%M %p') }}
-
-                        </small>
-
-                    </div>
-
-                {% endfor %}
-
-            </div>
-
-        {% else %}
-
-            <div class="alert alert-secondary mb-0">
-
-                No recent activity available.
-
-            </div>
-
-        {% endif %}
-
-    </div>
-
-</div>
-
-<!-- ================================= -->
-<!-- SEARCH -->
-<!-- ================================= -->
-
-<div class="card shadow-sm border-0 mb-4">
-
-    <div class="card-body">
-
-        <h4 class="fw-bold text-primary mb-3">
-
-            <i class="bi bi-search"></i>
-            Search Books
-
-        </h4>
-
-        <form
-            action="/dashboard"
-            method="GET">
-
-            <div class="input-group">
-
-                <input
-                    type="text"
-                    name="search"
-                    class="form-control form-control-lg"
-                    placeholder="Search by title, author or category">
-
-                <button
-                    class="btn btn-primary btn-lg">
-
-                    Search
-
-                </button>
-
-            </div>
-
-        </form>
-
-    </div>
-
-</div>
-
-<!-- ================================= -->
-<!-- LIBRARY ANALYTICS -->
-<!-- ================================= -->
-
-<div class="card shadow-sm border-0 mb-4">
-
-    <div class="card-body">
-
-        <div class="analytics-header">
-
-     <h2>
-
-        <i class="bi bi-pie-chart-fill"></i>
-        Library Analytics
-
-    </h2>
-
-    <p>
-
-        Real-time insights into your library collection and borrowing activities.
-
-    </p>
-
-</div>
-
-        <div class="row">
-
-            <!-- Pie Chart -->
-
-            <div class="col-lg-6 mb-4">
-
-                <div class="card analytics-card">
-
-                    <div class="card-body">
-
-                        <h5 class="analytics-title">
-
-                         <i class="bi bi-pie-chart"></i> Books by Category
-
-                        </h5>
-
-                        <canvas id="categoryChart"></canvas>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-            <!-- Bar Chart -->
-
-            <div class="col-lg-6 mb-4">
-
-                <div class="card analytics-card">
-
-                    <div class="card-body">
-
-                        <h5 class="analytics-title">
-
-                         <i class="bi bi-bar-chart-line"></i> Borrow Statistics
-
-                        </h5>
-
-                        <canvas id="borrowChart"></canvas>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    </div>
-
-</div>
-
-<!-- ========================= -->
-<!-- BOOKS TABLE -->
-<!-- ========================= -->
-
-<div class="premium-table">
-
-<table class="table table-hover align-middle mb-0">
-
-    <thead class="premium-table-head">
-
-        <tr>
-
-            <th>ID</th>
-            <th>Title</th>
-            <th>Author</th>
-            <th>Category</th>
-            <th>Available</th>
-            <th width="300">Actions</th>
-
-        </tr>
-
-    </thead>
-
-    <tbody>
-
-    {% for book in books %}
-
-        <tr>
-
-            <td>{{ book[0] }}</td>
-
-            <td>
-
-                <strong>{{ book[1] }}</strong>
-
-            </td>
-
-            <td>{{ book[2] }}</td>
-
-            <td>{{ book[3] }}</td>
-
-            <td>
-
-                {% if book[4] > 0 %}
-
-                    <span class="badge available-badge">
-
-                        {{ book[4] }} Available
-
-                    </span>
-
-                {% else %}
-
-                    <span class="badge bg-danger">
-
-                        Out of Stock
-
-                    </span>
-
-                {% endif %}
-
-            </td>
-
-            <td>
-
-                {% if book[4] > 0 %}
-
-                    <a href="/borrow/{{ book[0] }}"
-                       class="btn btn-primary btn-sm table-btn">
-
-                        Borrow
-
-                    </a>
-
-                {% else %}
-
-                    <button class="btn btn-secondary btn-sm table-btn"
-                            disabled>
-
-                        Borrow
-
-                    </button>
-
-                {% endif %}
-
-                {% if session["role"] in ["Head Librarian", "Librarian"] %}
-
-                    <a href="/edit/{{ book[0] }}"
-                       class="btn btn-warning btn-sm table-btn">
-
-                        Edit
-
-                    </a>
-
-                {% endif %}
-
-                {% if session["role"] == "Head Librarian" %}
-
-                    <a href="/delete/{{ book[0] }}"
-                       class="btn btn-danger btn-sm table-btn"
-                       data-confirm="Delete '{{ book[1] }}' from the catalog? This action cannot be undone.">
-
-                        Delete
-
-                    </a>
-
-                {% endif %}
-
-            </td>
-
-        </tr>
-
-    {% endfor %}
-
-    </tbody>
-
-</table>
-
-</div>                          
-
-<script>
-
-        const categoryData = {{ category_data | tojson }};
-
-        const borrowData = {{ borrow_stats | tojson }};
-
-        const topBooks = {{ top_books | tojson }};
-
-</script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 
 {% include "_footer.html" %}
 
 </body>
+
 </html>
